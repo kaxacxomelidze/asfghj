@@ -48,6 +48,8 @@ if (!$post) {
             <?php foreach($gallery as $g): ?>
               <div style="margin-bottom:16px">
                 <img src="<?=h($g['path'])?>" alt="" style="width:100%;height:auto;object-fit:cover;display:block">
+              <div style="margin-bottom:10px">
+                <img src="<?=h($g['path'])?>" alt="" style="width:100%;max-height:420px;object-fit:cover;display:block">
               </div>
             <?php endforeach; ?>
           </div>
