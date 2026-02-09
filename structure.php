@@ -1,6 +1,14 @@
 <?php
 $pageTitle = "SPG Portal — სტრუქტურა";
 require __DIR__ . "/inc/bootstrap.php";
+require __DIR__ . "/inc/people_section.php";
+include __DIR__ . "/header.php";
+
+// Add people like:
+// $people = [
+//   ['image' => 'assets/team/person.jpg', 'name' => 'Name Lastname', 'position' => 'Position'],
+// ];
+$people = [];
 include __DIR__ . "/header.php";
 ?>
 <section class="section">
@@ -9,4 +17,5 @@ include __DIR__ . "/header.php";
     <img src="<?=h(url('spg_logo2.png'))?>" alt="სტრუქტურა" style="width:100%;display:block;border-radius:18px">
   </div>
 </section>
+<?php render_people_section('Team', $people); ?>
 <?php include __DIR__ . "/footer.php"; ?>

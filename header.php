@@ -342,7 +342,7 @@
             </div>
           </div>
 
-          <a href="index.php#contact" data-i18n="nav.contact">კონტაქტი</a>
+          <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         </nav>
       </div>
 
@@ -351,7 +351,7 @@
         <a href="index.php#news" data-i18n="nav.news">სიახლეები</a>
         <a href="<?=h(url('history.php'))?>" data-i18n="nav.about">ჩვენს შესახებ</a>
         <a href="index.php#team-pr" data-i18n="nav.team">გუნდი</a>
-        <a href="index.php#contact" data-i18n="nav.contact">კონტაქტი</a>
+        <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         <a href="#register" data-i18n="header.registerCta">რეგისტრაცია</a>
         <a href="#signin" data-i18n="header.signin">Sign in</a>
       </div>

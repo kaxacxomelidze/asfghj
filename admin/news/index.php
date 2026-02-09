@@ -37,6 +37,9 @@ $rows = db()->query("SELECT id, category, title, published_at, is_published FROM
         <?php if(has_permission('admins.manage')): ?>
           <a style="margin-left:10px" href="<?=h(url('admin/admins/index.php'))?>">Admins</a>
         <?php endif; ?>
+        <?php if(has_permission('contact.view')): ?>
+          <a style="margin-left:10px" href="<?=h(url('admin/contact/index.php'))?>">Contact</a>
+        <?php endif; ?>
         <a style="margin-left:10px" href="<?=h(url('admin/logout.php'))?>">Logout</a>
       </div>
     </div>

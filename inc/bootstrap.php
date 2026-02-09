@@ -149,6 +149,7 @@ function available_admin_permissions(): array {
     'news.create' => 'Create news',
     'news.edit' => 'Edit news',
     'news.delete' => 'Delete news',
+    'contact.view' => 'View contact submissions',
     'admins.manage' => 'Manage admins',
   ];
 }
@@ -260,4 +261,23 @@ function get_news_gallery(int $postId): array {
     ];
   }
   return $out;
+}
+
+function ensure_contact_messages_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS contact_messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      email VARCHAR(190) NOT NULL,
+      phone VARCHAR(50) DEFAULT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
 }
