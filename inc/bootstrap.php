@@ -44,6 +44,21 @@ function url(string $path = ''): string {
 /** Escape HTML */
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+/** Normalize user-provided image paths */
+function normalize_image_path(string $path): string {
+  $path = trim($path);
+  if ($path === '') return '';
+
+  if (preg_match('~^https?://~i', $path)) return $path;
+  if (str_starts_with($path, '/')) return $path;
+
+  if (str_starts_with($path, 'assets/')) {
+    return url($path);
+  }
+
+  return url('assets/news/' . ltrim($path, '/'));
+}
+
 /** CSRF */
 function csrf_token(): string {
   if (empty($_SESSION['_csrf'])) {
@@ -96,6 +111,87 @@ function require_admin(): void {
   }
 }
 
+function ensure_admin_permissions_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS admin_permissions (
+      admin_id INT NOT NULL,
+      permission VARCHAR(64) NOT NULL,
+      PRIMARY KEY (admin_id, permission)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function ensure_news_gallery_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS news_gallery (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      image_path VARCHAR(255) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      INDEX (post_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function available_admin_permissions(): array {
+  return [
+    'news.view' => 'View news list',
+    'news.create' => 'Create news',
+    'news.edit' => 'Edit news',
+    'news.delete' => 'Delete news',
+    'admins.manage' => 'Manage admins',
+  ];
+}
+
+function admin_permissions_total_count(): int {
+  static $count = null;
+  if ($count !== null) return $count;
+  ensure_admin_permissions_table();
+  try {
+    $stmt = db()->query("SELECT COUNT(*) AS c FROM admin_permissions");
+    $count = (int)$stmt->fetchColumn();
+  } catch (Throwable $e) {
+    $count = 0;
+  }
+  return $count;
+}
+
+function admin_permissions(int $adminId): array {
+  ensure_admin_permissions_table();
+  try {
+    $stmt = db()->prepare("SELECT permission FROM admin_permissions WHERE admin_id=?");
+    $stmt->execute([$adminId]);
+    return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+function has_permission(string $perm): bool {
+  if (!is_admin()) return false;
+  $adminId = (int)($_SESSION['admin_id'] ?? 0);
+  $perms = admin_permissions($adminId);
+  if (!$perms && admin_permissions_total_count() === 0) return true;
+  return in_array($perm, $perms, true);
+}
+
+function require_permission(string $perm): void {
+  if (!has_permission($perm)) {
+    http_response_code(403);
+    exit('Access denied');
+  }
+}
+
 /** Helpers for news */
 function fmt_date_dmY(string $datetime): string {
   $t = strtotime($datetime);
@@ -122,7 +218,7 @@ function get_news_posts(int $limit = 50): array {
       'date' => fmt_date_dmY((string)$r['published_at']),
       'title' => (string)$r['title'],
       'text' => (string)$r['excerpt'],
-      'img' => (string)$r['image_path'],
+      'img' => normalize_image_path((string)$r['image_path']),
     ];
   }
   return $out;
@@ -141,7 +237,27 @@ function get_one_news(int $id): ?array {
     'title' => (string)$r['title'],
     'text' => (string)$r['excerpt'],
     'content' => (string)($r['content'] ?? ''),
-    'img' => (string)$r['image_path'],
+    'img' => normalize_image_path((string)$r['image_path']),
     'published_at' => (string)$r['published_at'],
   ];
+}
+
+function get_news_gallery(int $postId): array {
+  ensure_news_gallery_table();
+  try {
+    $stmt = db()->prepare("SELECT id, image_path FROM news_gallery WHERE post_id=? ORDER BY sort_order ASC, id ASC");
+    $stmt->execute([$postId]);
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+
+  $out = [];
+  foreach ($rows as $row) {
+    $out[] = [
+      'id' => (int)$row['id'],
+      'path' => normalize_image_path((string)$row['image_path']),
+    ];
+  }
+  return $out;
 }

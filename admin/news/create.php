@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../../inc/bootstrap.php';
 require_admin();
+require_permission('news.create');
 
 $errors = [];
 $data = [
@@ -14,24 +15,6 @@ $data = [
   'published_at' => date('Y-m-d\TH:i'),
   'is_published' => 1,
 ];
-
-function normalize_image_path(string $path): string {
-  $path = trim($path);
-  if ($path === '') return '';
-
-  // If already absolute URL (http/https) or starts with /, keep it
-  if (preg_match('~^https?://~i', $path)) return $path;
-  if (str_starts_with($path, '/')) return $path;
-
-  // If user typed "assets/..." make it project-correct like "/sspm/assets/..."
-  if (str_starts_with($path, 'assets/')) {
-    return url($path);
-  }
-
-  // Otherwise treat it as relative inside assets/news/
-  // Example: "news-1.jpg" -> "/sspm/assets/news/news-1.jpg"
-  return url('assets/news/' . ltrim($path, '/'));
-}
 
 function handle_upload(): ?string {
   if (empty($_FILES['image_file']) || $_FILES['image_file']['error'] === UPLOAD_ERR_NO_FILE) return null;
@@ -53,6 +36,29 @@ function handle_upload(): ?string {
 
   // ✅ Correct for any project folder (/sspm or root)
   return url('assets/news/uploads/' . $new);
+}
+
+function handle_gallery_uploads(): array {
+  if (empty($_FILES['gallery_files']) || !is_array($_FILES['gallery_files']['name'])) return [];
+  $files = $_FILES['gallery_files'];
+  $items = [];
+  foreach ($files['name'] as $i => $name) {
+    if ($files['error'][$i] === UPLOAD_ERR_NO_FILE) continue;
+    if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
+
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) continue;
+
+    $dir = __DIR__ . '/../../assets/news/uploads';
+    if (!is_dir($dir)) mkdir($dir, 0775, true);
+
+    $new  = 'news_gallery_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $dest = $dir . '/' . $new;
+
+    if (!move_uploaded_file($files['tmp_name'][$i], $dest)) continue;
+    $items[] = url('assets/news/uploads/' . $new);
+  }
+  return $items;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -91,6 +97,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       date('Y-m-d H:i:s', strtotime($data['published_at'])),
       $data['is_published'],
     ]);
+    $postId = (int)db()->lastInsertId();
+
+    ensure_news_gallery_table();
+    $galleryPaths = [];
+    $manualGallery = trim((string)($_POST['gallery_paths'] ?? ''));
+    if ($manualGallery !== '') {
+      foreach (preg_split('/\\r?\\n/', $manualGallery) as $line) {
+        $path = normalize_image_path($line);
+        if ($path !== '') $galleryPaths[] = $path;
+      }
+    }
+    $galleryPaths = array_merge($galleryPaths, handle_gallery_uploads());
+    if ($galleryPaths) {
+      $stmt = db()->prepare("INSERT INTO news_gallery (post_id, image_path, sort_order) VALUES (?, ?, ?)");
+      foreach ($galleryPaths as $i => $path) {
+        $stmt->execute([$postId, $path, $i + 1]);
+      }
+    }
 
     // ✅ FIXED redirect (works in /sspm or root)
     header('Location: ' . url('admin/news/index.php'));
@@ -169,6 +193,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label>OR Upload image</label>
             <input type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp">
           </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Gallery image paths (one per line)</label>
+          <textarea name="gallery_paths" placeholder="assets/news/gallery-1.jpg"></textarea>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>OR Upload gallery images</label>
+          <input type="file" name="gallery_files[]" accept=".jpg,.jpeg,.png,.webp" multiple>
         </div>
 
         <div style="margin-top:12px">

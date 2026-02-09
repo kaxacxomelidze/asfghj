@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../../inc/bootstrap.php';
 require_admin();
+require_permission('news.view');
 
 $rows = db()->query("SELECT id, category, title, published_at, is_published FROM news_posts ORDER BY published_at DESC, id DESC")->fetchAll();
 ?>
@@ -30,8 +31,13 @@ $rows = db()->query("SELECT id, category, title, published_at, is_published FROM
     <div class="top">
       <h2 style="margin:0">News Admin</h2>
       <div>
-        <a class="btn" href="create.php">+ Add News</a>
-        <a style="margin-left:10px" href="logout.php">Logout</a>
+        <?php if(has_permission('news.create')): ?>
+          <a class="btn" href="<?=h(url('admin/news/create.php'))?>">+ Add News</a>
+        <?php endif; ?>
+        <?php if(has_permission('admins.manage')): ?>
+          <a style="margin-left:10px" href="<?=h(url('admin/admins/index.php'))?>">Admins</a>
+        <?php endif; ?>
+        <a style="margin-left:10px" href="<?=h(url('admin/logout.php'))?>">Logout</a>
       </div>
     </div>
 
@@ -56,8 +62,16 @@ $rows = db()->query("SELECT id, category, title, published_at, is_published FROM
             <?php endif; ?>
           </td>
           <td class="actions">
-            <a href="/admin/news/edit.php?id=<?= (int)$r['id'] ?>">Edit</a>
-            <a href="/admin/news/delete.php?id=<?= (int)$r['id'] ?>" onclick="return confirm('Delete this post?')">Delete</a>
+            <?php if(has_permission('news.edit')): ?>
+              <a href="<?=h(url('admin/news/edit.php'))?>?id=<?= (int)$r['id'] ?>">Edit</a>
+            <?php endif; ?>
+            <?php if(has_permission('news.delete')): ?>
+              <form method="post" action="<?=h(url('admin/news/delete.php'))?>" style="display:inline">
+                <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button type="submit" onclick="return confirm('Delete this post?')">Delete</button>
+              </form>
+            <?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>
