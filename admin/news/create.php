@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../../inc/bootstrap.php';
+require_once __DIR__ . '/../_ui.php';
 require_admin();
 require_permission('news.create');
 
@@ -124,28 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Add News</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body{font-family:system-ui;background:#0b1220;color:#e5e7eb;margin:0}
-    .wrap{max-width:860px;margin:22px auto;padding:0 14px}
-    input,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:#111a2e;color:#fff}
-    textarea{min-height:120px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .btn{padding:12px 14px;border-radius:12px;border:0;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
-    .card{background:#111a2e;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px}
-    .err{color:#fca5a5;margin:10px 0}
-    a{color:#93c5fd;text-decoration:none}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h2 style="margin:0 0 12px">+ Add News</h2>
-    <p><a href="<?=h(url('admin/news/index.php'))?>">← Back</a></p>
+<?php admin_head('Add News'); ?>
+<body class="admin-body">
+  <div class="admin-wrap" style="max-width:900px">
+    <?php admin_topbar('Add News', [['href' => url('admin/news/index.php'), 'label' => '← Back to News']]); ?>
 
-    <div class="card">
+    <div class="admin-card">
       <?php if($errors): ?>
         <div class="err">
           <?php foreach($errors as $e) echo '<div>'.h($e).'</div>'; ?>
@@ -155,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
 
-        <div class="row">
+        <div class="grid-2">
           <div>
             <label>Category (cat)</label>
             <input name="category" value="<?=h($data['category'])?>" placeholder="განცხადება / ღონისძიება / ორგანიზაცია / ტრენინგი">
@@ -181,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <textarea name="content" style="min-height:180px"><?=h($data['content'])?></textarea>
         </div>
 
-        <div style="margin-top:12px" class="row">
+        <div style="margin-top:12px" class="grid-2">
           <div>
             <label>Image path (examples: assets/news/news-1.jpg OR news-1.jpg)</label>
             <input name="image_path" value="<?=h($data['image_path'])?>">

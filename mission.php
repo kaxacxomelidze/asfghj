@@ -4,12 +4,7 @@ require __DIR__ . "/inc/bootstrap.php";
 require __DIR__ . "/inc/people_section.php";
 include __DIR__ . "/header.php";
 
-// Add people like:
-// $people = [
-//   ['image' => 'assets/team/person.jpg', 'name' => 'Name Lastname', 'position' => 'Position'],
-// ];
 $people = [];
-include __DIR__ . "/header.php";
 ?>
 <section class="section">
   <div class="container" style="max-width:1000px;padding:40px 0">

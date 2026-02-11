@@ -192,10 +192,10 @@
       <!-- Team -->
       <div class="footerCol">
         <h4>გუნდი</h4>
-        <a class="footerLink" href="index.php#team-pr">PR & Event</a>
-        <a class="footerLink" href="index.php#team-aparati">აპარატი</a>
-        <a class="footerLink" href="index.php#team-parlament">სტუდენტური პარლამენტი</a>
-        <a class="footerLink" href="index.php#team-gov">სტუდენტური მთავრობა</a>
+        <a class="footerLink" href="pr-event.php">PR & Event</a>
+        <a class="footerLink" href="aparati.php">აპარატი</a>
+        <a class="footerLink" href="parlament.php">სტუდენტური პარლამენტი</a>
+        <a class="footerLink" href="gov.php">სტუდენტური მთავრობა</a>
       </div>
 
       <!-- Contact -->

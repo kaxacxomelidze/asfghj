@@ -335,10 +335,10 @@
               <span data-i18n="nav.team">გუნდი</span> <span class="caret">▾</span>
             </button>
             <div class="menu" role="menu">
-              <a href="index.php#team-pr" data-i18n="nav.teamPr">PR &amp; EVENT</a>
-              <a href="index.php#team-aparati" data-i18n="nav.teamAparati">აპარატი</a>
-              <a href="index.php#team-parlament" data-i18n="nav.teamParlament">სტუდენტური პარლამენტი</a>
-              <a href="index.php#team-gov" data-i18n="nav.teamGov">სტუდენტური მთავრობა</a>
+              <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.teamPr">PR &amp; EVENT</a>
+              <a href="<?=h(url('aparati.php'))?>" data-i18n="nav.teamAparati">აპარატი</a>
+              <a href="<?=h(url('parlament.php'))?>" data-i18n="nav.teamParlament">სტუდენტური პარლამენტი</a>
+              <a href="<?=h(url('gov.php'))?>" data-i18n="nav.teamGov">სტუდენტური მთავრობა</a>
             </div>
           </div>
 
@@ -350,7 +350,7 @@
         <a href="index.php#home" data-i18n="nav.home">მთავარი</a>
         <a href="index.php#news" data-i18n="nav.news">სიახლეები</a>
         <a href="<?=h(url('history.php'))?>" data-i18n="nav.about">ჩვენს შესახებ</a>
-        <a href="index.php#team-pr" data-i18n="nav.team">გუნდი</a>
+        <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.team">გუნდი</a>
         <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         <a href="#register" data-i18n="header.registerCta">რეგისტრაცია</a>
         <a href="#signin" data-i18n="header.signin">Sign in</a>

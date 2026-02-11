@@ -149,6 +149,7 @@ function available_admin_permissions(): array {
     'news.create' => 'Create news',
     'news.edit' => 'Edit news',
     'news.delete' => 'Delete news',
+    'people.manage' => 'Manage team members',
     'contact.view' => 'View contact submissions',
     'admins.manage' => 'Manage admins',
   ];
@@ -280,4 +281,60 @@ function ensure_contact_messages_table(): void {
   } catch (Throwable $e) {
     // ignore if DB user lacks permissions
   }
+}
+
+function ensure_people_profiles_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS people_profiles (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      page_key VARCHAR(64) NOT NULL,
+      first_name VARCHAR(120) NOT NULL,
+      last_name VARCHAR(120) NOT NULL,
+      role_title VARCHAR(180) DEFAULT NULL,
+      image_path VARCHAR(255) DEFAULT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL,
+      INDEX (page_key),
+      INDEX (sort_order)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function people_page_labels(): array {
+  return [
+    'pr-event' => 'PR & EVENT',
+    'aparati' => 'აპარატი',
+    'parlament' => 'სტუდენტური პარლამენტი',
+    'gov' => 'სტუდენტური მთავრობა',
+  ];
+}
+
+function get_people_by_page(string $pageKey): array {
+  ensure_people_profiles_table();
+  try {
+    $stmt = db()->prepare("SELECT first_name, last_name, role_title, image_path
+      FROM people_profiles
+      WHERE page_key=?
+      ORDER BY sort_order ASC, id ASC");
+    $stmt->execute([$pageKey]);
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+
+  $out = [];
+  foreach ($rows as $row) {
+    $fullName = trim(((string)$row['first_name']) . ' ' . ((string)$row['last_name']));
+    $out[] = [
+      'image' => normalize_image_path((string)($row['image_path'] ?? '')),
+      'name' => $fullName,
+      'position' => (string)($row['role_title'] ?? ''),
+    ];
+  }
+  return $out;
 }
