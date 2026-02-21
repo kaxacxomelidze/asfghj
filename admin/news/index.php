@@ -18,6 +18,7 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
       if (has_permission('admins.manage')) $links[] = ['href' => url('admin/admins/index.php'), 'label' => 'Admins'];
       if (has_permission('contact.view')) $links[] = ['href' => url('admin/contact/index.php'), 'label' => 'Contact'];
       if (has_permission('people.manage')) $links[] = ['href' => url('admin/people/index.php'), 'label' => 'People'];
+      if (has_permission('membership.view')) $links[] = ['href' => url('admin/memberships/index.php'), 'label' => 'Memberships'];
       $links[] = ['href' => url('admin/logout.php'), 'label' => 'Logout'];
       admin_topbar('News Admin', $links);
     ?>
@@ -55,6 +56,9 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
         <?php endif; ?>
         <?php if(has_permission('people.manage')): ?>
           <a style="margin-left:10px" href="<?=h(url('admin/people/index.php'))?>">People</a>
+        <?php endif; ?>
+        <?php if(has_permission('membership.view')): ?>
+          <a style="margin-left:10px" href="<?=h(url('admin/memberships/index.php'))?>">Memberships</a>
         <?php endif; ?>
         <a style="margin-left:10px" href="<?=h(url('admin/logout.php'))?>">Logout</a>
       </div>
