@@ -3,10 +3,10 @@ require __DIR__ . '/inc/bootstrap.php';
 $pageTitle = 'SPG Portal — მომხმარებლის ავტორიზაცია';
 include __DIR__ . '/header.php';
 ?>
-<section class="section" id="dashboard">
+<section class="section">
   <div class="container" style="max-width:900px;padding:40px 0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
     <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
-      <h2 style="margin-bottom:12px">მომხმარებლის dashboard — შესვლა</h2>
+      <h2 style="margin-bottom:12px">მომხმარებლის შესვლა</h2>
       <p style="color:var(--muted);margin-bottom:14px">ეს ფორმა განკუთვნილია მხოლოდ მომხმარებლისთვის და არა ადმინისტრატორისთვის.</p>
       <form action="#" method="post" style="display:grid;gap:12px">
         <div>
