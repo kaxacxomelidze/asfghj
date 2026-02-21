@@ -296,7 +296,7 @@
     <div class="brandbar">
       <div class="container brandbar__inner">
         <div class="leftActions">
-          <a class="btn signin" href="<?=h(url('user-auth.php'))?>" data-i18n="header.signin">🔐 Sign in</a>
+          <a class="btn signin" href="<?=h(url('user-auth.php#dashboard'))?>" data-i18n="header.signin">🔐 Sign in</a>
         </div>
 
         <a class="brand" href="index.php#home" aria-label="Home">
@@ -353,7 +353,7 @@
         <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.team">გუნდი</a>
         <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         <a href="<?=h(url('membership.php'))?>" data-i18n="header.registerCta">რეგისტრაცია</a>
-        <a href="<?=h(url('user-auth.php'))?>" data-i18n="header.signin">Sign in</a>
+        <a href="<?=h(url('user-auth.php#dashboard'))?>" data-i18n="header.signin">Sign in</a>
       </div>
     </div>
   </header>

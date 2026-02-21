@@ -1,45 +1,159 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
 $pageTitle = 'SPG Portal — მომხმარებლის ავტორიზაცია';
+ensure_users_table();
+
+$tab = (string)($_GET['tab'] ?? 'signin');
+if (!in_array($tab, ['signin', 'signup'], true)) $tab = 'signin';
+$errors = [];
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_verify();
+  $action = (string)($_POST['action'] ?? '');
+
+  if ($action === 'signup') {
+    $fullName = trim((string)($_POST['full_name'] ?? ''));
+    $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+    $password = (string)($_POST['password'] ?? '');
+
+    if ($fullName === '' || $email === '' || $password === '') $errors[] = 'გთხოვთ შეავსოთ ყველა ველი.';
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'ელ-ფოსტის ფორმატი არასწორია.';
+    if ($password !== '' && strlen($password) < 6) $errors[] = 'პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო.';
+
+    if (!$errors) {
+      try {
+        $stmt = db()->prepare('SELECT id FROM users WHERE email=? LIMIT 1');
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+          $errors[] = 'ეს ელ-ფოსტა უკვე გამოყენებულია.';
+        } else {
+          $stmt = db()->prepare('INSERT INTO users (full_name, email, password_hash, created_at) VALUES (?, ?, ?, ?)');
+          $stmt->execute([$fullName, $email, password_hash($password, PASSWORD_DEFAULT), date('Y-m-d H:i:s')]);
+          $userId = (int)db()->lastInsertId();
+          session_regenerate_id(true);
+          $_SESSION['user_id'] = $userId;
+          $_SESSION['user_name'] = $fullName;
+          $_SESSION['user_email'] = $email;
+          header('Location: ' . url('user-auth.php#dashboard'));
+          exit;
+        }
+      } catch (Throwable $e) {
+        $errors[] = 'რეგისტრაცია ვერ შესრულდა. სცადეთ მოგვიანებით.';
+      }
+    }
+    $tab = 'signup';
+  }
+
+  if ($action === 'signin') {
+    $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+    $password = (string)($_POST['password'] ?? '');
+    if ($email === '' || $password === '') $errors[] = 'შეიყვანეთ ელ-ფოსტა და პაროლი.';
+
+    if (!$errors) {
+      try {
+        $stmt = db()->prepare('SELECT id, full_name, email, password_hash FROM users WHERE email=? LIMIT 1');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        if ($user && password_verify($password, (string)$user['password_hash'])) {
+          session_regenerate_id(true);
+          $_SESSION['user_id'] = (int)$user['id'];
+          $_SESSION['user_name'] = (string)$user['full_name'];
+          $_SESSION['user_email'] = (string)$user['email'];
+          header('Location: ' . url('user-auth.php#dashboard'));
+          exit;
+        }
+      } catch (Throwable $e) {
+        // ignore details
+      }
+      $errors[] = 'მომხმარებელი ან პაროლი არასწორია.';
+    }
+    $tab = 'signin';
+  }
+
+  if ($action === 'logout') {
+    unset($_SESSION['user_id'], $_SESSION['user_name'], $_SESSION['user_email']);
+    $success = 'თქვენ გამოხვედით ანგარიშიდან.';
+    $tab = 'signin';
+  }
+}
+
+$user = current_user();
 include __DIR__ . '/header.php';
 ?>
-<section class="section">
-  <div class="container" style="max-width:900px;padding:40px 0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
-    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
-      <h2 style="margin-bottom:12px">მომხმარებლის შესვლა</h2>
-      <p style="color:var(--muted);margin-bottom:14px">ეს ფორმა განკუთვნილია მხოლოდ მომხმარებლისთვის და არა ადმინისტრატორისთვის.</p>
-      <form action="#" method="post" style="display:grid;gap:12px">
-        <div>
-          <label for="signin-email">ელ-ფოსტა</label><br>
-          <input id="signin-email" type="email" name="email" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
-        </div>
-        <div>
-          <label for="signin-pass">პაროლი</label><br>
-          <input id="signin-pass" type="password" name="password" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
-        </div>
-        <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#2563eb;color:#fff;font-weight:800;cursor:pointer">შესვლა</button>
-      </form>
+<section class="section" id="dashboard" style="scroll-margin-top:120px;">
+  <div class="container" style="max-width:1000px;padding:34px 0 48px;display:grid;gap:16px;">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 14px 32px rgba(15,23,42,.06)">
+      <h2 style="margin:0 0 8px">მომხმარებლის Dashboard</h2>
+      <?php if($user): ?>
+        <p style="margin:0;color:var(--muted)">მოგესალმებით, <b><?=h($user['name'])?></b> (<?=h($user['email'])?>).</p>
+      <?php else: ?>
+        <p style="margin:0;color:var(--muted)">ანგარიშში შესვლის შემდეგ აქ გამოჩნდება თქვენი ინფორმაცია.</p>
+      <?php endif; ?>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <a href="<?=h(url('news.php'))?>" class="btn">სიახლეები</a>
+        <a href="<?=h(url('membership.php'))?>" class="btn primary">გაწევრიანების ფორმა</a>
+      </div>
     </div>
 
-    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
-      <h2 style="margin-bottom:12px">მომხმარებლის რეგისტრაცია</h2>
-      <p style="color:var(--muted);margin-bottom:14px">შექმენი მომხმარებლის ახალი ანგარიში.</p>
-      <form action="#" method="post" style="display:grid;gap:12px">
-        <div>
-          <label for="signup-name">სახელი და გვარი</label><br>
-          <input id="signup-name" name="full_name" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+    <?php if($success): ?><div class="ok"><?=h($success)?></div><?php endif; ?>
+    <?php if($errors): ?><div class="err"><?php foreach($errors as $e) echo '<div>'.h($e).'</div>'; ?></div><?php endif; ?>
+
+    <?php if($user): ?>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;max-width:460px;">
+        <h3 style="margin-bottom:12px">თქვენ უკვე სისტემაში ხართ</h3>
+        <form method="post">
+          <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
+          <input type="hidden" name="action" value="logout">
+          <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#ef4444;color:#fff;font-weight:800;cursor:pointer">გასვლა</button>
+        </form>
+      </div>
+    <?php else: ?>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="<?=h(url('user-auth.php?tab=signin#dashboard'))?>" class="btn <?= $tab==='signin' ? 'primary' : '' ?>">შესვლა</a>
+        <a href="<?=h(url('user-auth.php?tab=signup#dashboard'))?>" class="btn <?= $tab==='signup' ? 'primary' : '' ?>">რეგისტრაცია</a>
+      </div>
+
+      <?php if($tab === 'signin'): ?>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;max-width:560px;">
+          <h3 style="margin-bottom:12px">მომხმარებლის შესვლა</h3>
+          <form method="post" style="display:grid;gap:12px">
+            <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
+            <input type="hidden" name="action" value="signin">
+            <div>
+              <label for="signin-email">ელ-ფოსტა</label><br>
+              <input id="signin-email" type="email" name="email" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            </div>
+            <div>
+              <label for="signin-pass">პაროლი</label><br>
+              <input id="signin-pass" type="password" name="password" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            </div>
+            <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#2563eb;color:#fff;font-weight:800;cursor:pointer">შესვლა</button>
+          </form>
         </div>
-        <div>
-          <label for="signup-email">ელ-ფოსტა</label><br>
-          <input id="signup-email" type="email" name="email" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+      <?php else: ?>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;max-width:560px;">
+          <h3 style="margin-bottom:12px">მომხმარებლის რეგისტრაცია</h3>
+          <form method="post" style="display:grid;gap:12px">
+            <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
+            <input type="hidden" name="action" value="signup">
+            <div>
+              <label for="signup-name">სახელი და გვარი</label><br>
+              <input id="signup-name" name="full_name" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            </div>
+            <div>
+              <label for="signup-email">ელ-ფოსტა</label><br>
+              <input id="signup-email" type="email" name="email" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            </div>
+            <div>
+              <label for="signup-pass">პაროლი</label><br>
+              <input id="signup-pass" type="password" name="password" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            </div>
+            <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#0ea5e9;color:#fff;font-weight:800;cursor:pointer">რეგისტრაცია</button>
+          </form>
         </div>
-        <div>
-          <label for="signup-pass">პაროლი</label><br>
-          <input id="signup-pass" type="password" name="password" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
-        </div>
-        <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#0ea5e9;color:#fff;font-weight:800;cursor:pointer">რეგისტრაცია</button>
-      </form>
-    </div>
+      <?php endif; ?>
+    <?php endif; ?>
   </div>
 </section>
 <?php include __DIR__ . '/footer.php'; ?>

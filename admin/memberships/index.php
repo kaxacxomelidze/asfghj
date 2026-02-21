@@ -18,7 +18,13 @@ $rows = db()->query('SELECT id, first_name, last_name, personal_id, phone, unive
       ['href' => url('admin/logout.php'), 'label' => 'Logout'],
     ]); ?>
 
-    <div class="admin-card">
+    <div class="grid-3">
+      <div class="admin-card"><label>Total</label><div style="font-size:30px;font-weight:900"><?= count($rows) ?></div></div>
+      <div class="admin-card"><label>Today</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= count(array_filter($rows, fn($r) => str_starts_with((string)$r['created_at'], date('Y-m-d')))) ?></div></div>
+      <div class="admin-card"><label>Latest</label><div style="font-size:15px;font-weight:700;color:#cbd5e1"><?= $rows ? h((string)$rows[0]['created_at']) : '—' ?></div></div>
+    </div>
+
+    <div class="admin-card" style="margin-top:14px">
       <table class="admin-table">
         <thead>
           <tr>

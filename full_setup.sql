@@ -59,6 +59,16 @@ CREATE TABLE IF NOT EXISTS news_gallery (
 -- -----------------------------
 -- Contact / membership / people
 -- -----------------------------
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(190) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_users_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
@@ -146,3 +156,9 @@ WHERE NOT EXISTS (
 );
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- Optional demo portal user
+INSERT INTO users (full_name, email, password_hash, created_at)
+SELECT 'Demo User', 'demo.user@spg.local', '$2y$12$cxnO4Ul4RjjrRFjUrYAdzOsecDE0Mx23dTGHzooiqJCyuKEEZDuX.', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='demo.user@spg.local');

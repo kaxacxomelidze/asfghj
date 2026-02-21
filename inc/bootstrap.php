@@ -195,6 +195,38 @@ function require_permission(string $perm): void {
   }
 }
 
+
+function ensure_users_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      full_name VARCHAR(190) NOT NULL,
+      email VARCHAR(190) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function is_user_logged_in(): bool {
+  return !empty($_SESSION['user_id']);
+}
+
+function current_user(): ?array {
+  if (!is_user_logged_in()) return null;
+  return [
+    'id' => (int)($_SESSION['user_id'] ?? 0),
+    'name' => (string)($_SESSION['user_name'] ?? ''),
+    'email' => (string)($_SESSION['user_email'] ?? ''),
+  ];
+}
+
 /** Helpers for news */
 function fmt_date_dmY(string $datetime): string {
   $t = strtotime($datetime);
