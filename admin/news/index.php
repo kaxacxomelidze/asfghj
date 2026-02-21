@@ -6,6 +6,12 @@ require_admin();
 require_permission('news.view');
 
 $rows = db()->query('SELECT id, category, title, published_at, is_published FROM news_posts ORDER BY published_at DESC, id DESC')->fetchAll();
+$total = count($rows);
+$published = 0;
+foreach ($rows as $row) {
+  if ((int)$row['is_published'] === 1) $published++;
+}
+$hidden = $total - $published;
 ?>
 <!doctype html>
 <html lang="en">
@@ -20,7 +26,7 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
       if (has_permission('people.manage')) $links[] = ['href' => url('admin/people/index.php'), 'label' => 'People'];
       if (has_permission('membership.view')) $links[] = ['href' => url('admin/memberships/index.php'), 'label' => 'Memberships'];
       $links[] = ['href' => url('admin/logout.php'), 'label' => 'Logout'];
-      admin_topbar('News Admin', $links);
+      admin_topbar('News Admin Panel', $links);
     ?>
 <head>
   <meta charset="utf-8">
@@ -64,13 +70,15 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
       </div>
     </div>
 
-    <div class="admin-card">
+    <div class="admin-card" style="margin-top:14px">
       <table class="admin-table">
         <thead>
-          <tr><th>ID</th><th>Category</th><th>Title</th><th>Published</th><th>Status</th><th>Actions</th></tr>
+          <tr><th>ID</th><th>Category</th><th>Title</th><th>Published At</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody>
-          <?php foreach($rows as $r): ?>
+          <?php if(!$rows): ?>
+            <tr><td colspan="6">No news posts yet.</td></tr>
+          <?php else: foreach($rows as $r): ?>
             <tr>
               <td><?= (int)$r['id'] ?></td>
               <td><?= h((string)$r['category']) ?></td>
@@ -79,7 +87,7 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
               <td><?= (int)$r['is_published'] === 1 ? '<span class="pill">Published</span>' : '<span class="pill off">Hidden</span>' ?></td>
               <td>
                 <?php if(has_permission('news.edit')): ?>
-                  <a href="<?=h(url('admin/news/edit.php'))?>?id=<?= (int)$r['id'] ?>">Edit</a>
+                  <a class="admin-link" href="<?=h(url('admin/news/edit.php'))?>?id=<?= (int)$r['id'] ?>">Edit</a>
                 <?php endif; ?>
                 <?php if(has_permission('news.delete')): ?>
                   <form method="post" action="<?=h(url('admin/news/delete.php'))?>" style="display:inline;margin-left:8px">
@@ -90,7 +98,7 @@ $rows = db()->query('SELECT id, category, title, published_at, is_published FROM
                 <?php endif; ?>
               </td>
             </tr>
-          <?php endforeach; ?>
+          <?php endforeach; endif; ?>
         </tbody>
       </table>
     </div>
