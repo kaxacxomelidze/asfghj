@@ -202,17 +202,21 @@ function fmt_date_dmY(string $datetime): string {
 }
 
 function get_news_posts(int $limit = 50): array {
-  $stmt = db()->prepare("
+  try {
+    $stmt = db()->prepare("
     SELECT id, category, title, excerpt, image_path, published_at
     FROM news_posts
     WHERE is_published=1
     ORDER BY published_at DESC, id DESC
     LIMIT :lim
   ");
-  $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-  $stmt->execute();
+    $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
 
-  $rows = $stmt->fetchAll();
   $out = [];
   foreach ($rows as $r) {
     $out[] = [
@@ -228,9 +232,13 @@ function get_news_posts(int $limit = 50): array {
 }
 
 function get_one_news(int $id): ?array {
-  $stmt = db()->prepare("SELECT * FROM news_posts WHERE id=? AND is_published=1 LIMIT 1");
-  $stmt->execute([$id]);
-  $r = $stmt->fetch();
+  try {
+    $stmt = db()->prepare("SELECT * FROM news_posts WHERE id=? AND is_published=1 LIMIT 1");
+    $stmt->execute([$id]);
+    $r = $stmt->fetch();
+  } catch (Throwable $e) {
+    return null;
+  }
   if (!$r) return null;
 
   return [
