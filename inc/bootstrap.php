@@ -151,6 +151,7 @@ function available_admin_permissions(): array {
     'news.delete' => 'Delete news',
     'people.manage' => 'Manage team members',
     'contact.view' => 'View contact submissions',
+    'membership.view' => 'View membership applications',
     'admins.manage' => 'Manage admins',
   ];
 }
@@ -201,17 +202,21 @@ function fmt_date_dmY(string $datetime): string {
 }
 
 function get_news_posts(int $limit = 50): array {
-  $stmt = db()->prepare("
+  try {
+    $stmt = db()->prepare("
     SELECT id, category, title, excerpt, image_path, published_at
     FROM news_posts
     WHERE is_published=1
     ORDER BY published_at DESC, id DESC
     LIMIT :lim
   ");
-  $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-  $stmt->execute();
+    $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
 
-  $rows = $stmt->fetchAll();
   $out = [];
   foreach ($rows as $r) {
     $out[] = [
@@ -227,9 +232,13 @@ function get_news_posts(int $limit = 50): array {
 }
 
 function get_one_news(int $id): ?array {
-  $stmt = db()->prepare("SELECT * FROM news_posts WHERE id=? AND is_published=1 LIMIT 1");
-  $stmt->execute([$id]);
-  $r = $stmt->fetch();
+  try {
+    $stmt = db()->prepare("SELECT * FROM news_posts WHERE id=? AND is_published=1 LIMIT 1");
+    $stmt->execute([$id]);
+    $r = $stmt->fetch();
+  } catch (Throwable $e) {
+    return null;
+  }
   if (!$r) return null;
 
   return [
@@ -275,6 +284,29 @@ function ensure_contact_messages_table(): void {
       email VARCHAR(190) NOT NULL,
       phone VARCHAR(50) DEFAULT NULL,
       message TEXT NOT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function ensure_membership_applications_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS membership_applications (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      first_name VARCHAR(120) NOT NULL,
+      last_name VARCHAR(120) NOT NULL,
+      personal_id VARCHAR(30) NOT NULL,
+      phone VARCHAR(50) NOT NULL,
+      university VARCHAR(190) NOT NULL,
+      faculty VARCHAR(190) NOT NULL,
+      email VARCHAR(190) DEFAULT NULL,
+      additional_info TEXT DEFAULT NULL,
       created_at DATETIME NOT NULL,
       INDEX (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
