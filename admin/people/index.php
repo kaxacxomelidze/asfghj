@@ -223,6 +223,13 @@ $rows = db()->query(
      ORDER BY page_key ASC, sort_order ASC, id ASC'
 )->fetchAll();
 
+$pageTotals = [];
+foreach ($pageLabels as $k => $_l) $pageTotals[$k] = 0;
+foreach ($rows as $r) {
+    $k = (string)$r['page_key'];
+    if (isset($pageTotals[$k])) $pageTotals[$k]++;
+}
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -234,6 +241,12 @@ $rows = db()->query(
         ['href' => url('admin/news/index.php'), 'label' => 'News Admin'],
         ['href' => url('admin/logout.php'), 'label' => 'Logout'],
     ]); ?>
+
+    <div class="grid-3">
+      <div class="admin-card"><label>Total team members</label><div style="font-size:30px;font-weight:900"><?= count($rows) ?></div></div>
+      <div class="admin-card"><label>Pages covered</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= count(array_filter($pageTotals, fn($n)=>$n>0)) ?></div></div>
+      <div class="admin-card"><label>Largest section</label><div style="font-size:15px;font-weight:700;color:#cbd5e1"><?php $mx=0;$mk='—'; foreach($pageTotals as $k=>$n){ if($n>$mx){$mx=$n;$mk=$pageLabels[$k];}} echo h((string)$mk); ?></div></div>
+    </div>
 
     <?php if ($editId > 0 && $editRow): ?>
         <!-- EDIT FORM -->
