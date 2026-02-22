@@ -13,13 +13,13 @@ function h_local($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
 
 // Tag colors (same as your file)
 function tag_class($cat){
-  return match($cat){
-    "განცხადება" => "tagBlue",
-    "ღონისძიება" => "tagCyan",
-    "ორგანიზაცია" => "tagSlate",
-    "ტრენინგი" => "tagIndigo",
-    default => "tagSlate"
-  };
+  switch ((string)$cat) {
+    case 'განცხადება': return 'tagBlue';
+    case 'ღონისძიება': return 'tagCyan';
+    case 'ორგანიზაცია': return 'tagSlate';
+    case 'ტრენინგი': return 'tagIndigo';
+    default: return 'tagSlate';
+  }
 }
 
 // Safe slice helper
