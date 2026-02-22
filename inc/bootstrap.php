@@ -161,6 +161,8 @@ function available_admin_permissions(): array {
     'people.manage' => 'Manage team members',
     'contact.view' => 'View contact submissions',
     'membership.view' => 'View membership applications',
+    'university.manage' => 'Manage university system data',
+    'admin.logs.view' => 'View admin login logs',
     'admins.manage' => 'Manage admins',
   ];
 }
@@ -204,6 +206,49 @@ function require_permission(string $perm): void {
   }
 }
 
+
+
+function ensure_admin_login_logs_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS admin_login_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(120) NOT NULL,
+      admin_id INT DEFAULT NULL,
+      ip_address VARCHAR(64) DEFAULT NULL,
+      user_agent VARCHAR(255) DEFAULT NULL,
+      status VARCHAR(24) NOT NULL,
+      reason VARCHAR(190) DEFAULT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX idx_admin_login_logs_created_at (created_at),
+      INDEX idx_admin_login_logs_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function record_admin_login_log(string $username, ?int $adminId, string $status, string $reason = ''): void {
+  ensure_admin_login_logs_table();
+  $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+  $ua = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+  try {
+    $stmt = db()->prepare('INSERT INTO admin_login_logs (username, admin_id, ip_address, user_agent, status, reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([
+      $username,
+      $adminId,
+      $ip !== '' ? $ip : null,
+      $ua !== '' ? $ua : null,
+      $status,
+      $reason !== '' ? $reason : null,
+      date('Y-m-d H:i:s')
+    ]);
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
 
 function ensure_users_table(): void {
   static $done = false;

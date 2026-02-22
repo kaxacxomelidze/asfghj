@@ -32,6 +32,23 @@ CREATE TABLE IF NOT EXISTS admin_permissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------
+-- Admin security logs
+-- -----------------------------
+
+CREATE TABLE IF NOT EXISTS admin_login_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(120) NOT NULL,
+  admin_id INT DEFAULT NULL,
+  ip_address VARCHAR(64) DEFAULT NULL,
+  user_agent VARCHAR(255) DEFAULT NULL,
+  status VARCHAR(24) NOT NULL,
+  reason VARCHAR(190) DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_admin_login_logs_created_at (created_at),
+  INDEX idx_admin_login_logs_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------
 -- News tables
 -- -----------------------------
 CREATE TABLE IF NOT EXISTS news_posts (
@@ -182,6 +199,8 @@ JOIN (
   UNION ALL SELECT 'people.manage'
   UNION ALL SELECT 'contact.view'
   UNION ALL SELECT 'membership.view'
+  UNION ALL SELECT 'university.manage'
+  UNION ALL SELECT 'admin.logs.view'
   UNION ALL SELECT 'admins.manage'
 ) p
 WHERE a.username = 'admin';

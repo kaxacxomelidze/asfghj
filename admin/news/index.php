@@ -25,6 +25,8 @@ $hidden = $total - $published;
       if (has_permission('contact.view')) $links[] = ['href' => url('admin/contact/index.php'), 'label' => 'Contact'];
       if (has_permission('people.manage')) $links[] = ['href' => url('admin/people/index.php'), 'label' => 'People'];
       if (has_permission('membership.view')) $links[] = ['href' => url('admin/memberships/index.php'), 'label' => 'Memberships'];
+      if (has_permission('university.manage')) $links[] = ['href' => url('admin/university.php'), 'label' => 'University'];
+      if (has_permission('admin.logs.view')) $links[] = ['href' => url('admin/admin-login-logs.php'), 'label' => 'Login Logs'];
       $links[] = ['href' => url('admin/logout.php'), 'label' => 'Logout'];
       admin_topbar('News Admin Panel', $links);
     ?>
