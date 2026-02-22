@@ -67,6 +67,10 @@ $admins = db()->query('SELECT id, username FROM admins ORDER BY id ASC')->fetchA
 $permissionsMap = [];
 foreach ($admins as $admin) $permissionsMap[(int)$admin['id']] = admin_permissions((int)$admin['id']);
 $availablePermissions = available_admin_permissions();
+$adminsWithCustomPerms = 0;
+foreach ($admins as $a) {
+  if (!empty($permissionsMap[(int)$a['id']] ?? [])) $adminsWithCustomPerms++;
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -81,6 +85,12 @@ $availablePermissions = available_admin_permissions();
     <?php if($errors): ?><div class="err"><?php foreach($errors as $e) echo '<div>'.h($e).'</div>'; ?></div><?php endif; ?>
     <?php if($notice): ?><div class="ok"><?=h($notice)?></div><?php endif; ?>
 
+    <div class="grid-3">
+      <div class="admin-card"><label>Total admins</label><div style="font-size:30px;font-weight:900"><?= count($admins) ?></div></div>
+      <div class="admin-card"><label>With custom permissions</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= $adminsWithCustomPerms ?></div></div>
+      <div class="admin-card"><label>Permission types</label><div style="font-size:30px;font-weight:900;color:#86efac"><?= count($availablePermissions) ?></div></div>
+    </div>
+
     <div class="admin-card">
       <h3 style="margin:0 0 10px">Add Admin</h3>
       <form method="post">
@@ -93,7 +103,7 @@ $availablePermissions = available_admin_permissions();
         <div style="margin-top:12px">
           <label>Permissions</label>
           <?php foreach($availablePermissions as $key => $label): ?>
-            <label style="display:block;margin:6px 0"><input type="checkbox" name="perms[]" value="<?=h($key)?>"> <?=h($label)?></label>
+            <label style="display:block;margin:6px 0;padding:8px 10px;border:1px solid rgba(148,163,184,.2);border-radius:10px"><input type="checkbox" name="perms[]" value="<?=h($key)?>"> <?=h($label)?></label>
           <?php endforeach; ?>
         </div>
         <div style="margin-top:12px"><button class="btn" type="submit">Add Admin</button></div>
@@ -115,7 +125,7 @@ $availablePermissions = available_admin_permissions();
           <div style="margin-top:12px">
             <label>Permissions</label>
             <?php foreach($availablePermissions as $key => $label): ?>
-              <label style="display:block;margin:6px 0"><input type="checkbox" name="perms[]" value="<?=h($key)?>" <?= in_array($key, $permissionsMap[$adminId] ?? [], true) ? 'checked' : '' ?>> <?=h($label)?></label>
+              <label style="display:block;margin:6px 0;padding:8px 10px;border:1px solid rgba(148,163,184,.2);border-radius:10px"><input type="checkbox" name="perms[]" value="<?=h($key)?>" <?= in_array($key, $permissionsMap[$adminId] ?? [], true) ? 'checked' : '' ?>> <?=h($label)?></label>
             <?php endforeach; ?>
           </div>
 
