@@ -1,0 +1,263 @@
+-- =========================================================
+-- SPG Portal - FULL SETUP (all-in-one)
+-- Creates database, tables, admin user, permissions, and sample news
+-- Default admin login:
+--   username: admin
+--   password: admin
+-- =========================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+CREATE DATABASE IF NOT EXISTS spg_portal
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+USE spg_portal;
+
+-- -----------------------------
+-- Core admin tables
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(120) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS admin_permissions (
+  admin_id INT NOT NULL,
+  permission VARCHAR(64) NOT NULL,
+  PRIMARY KEY (admin_id, permission),
+  INDEX idx_admin_permissions_admin_id (admin_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------
+-- Admin security logs
+-- -----------------------------
+
+CREATE TABLE IF NOT EXISTS admin_login_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(120) NOT NULL,
+  admin_id INT DEFAULT NULL,
+  ip_address VARCHAR(64) DEFAULT NULL,
+  user_agent VARCHAR(255) DEFAULT NULL,
+  status VARCHAR(24) NOT NULL,
+  reason VARCHAR(190) DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_admin_login_logs_created_at (created_at),
+  INDEX idx_admin_login_logs_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------
+-- News tables
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS news_posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  category VARCHAR(120) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  excerpt TEXT NOT NULL,
+  content LONGTEXT DEFAULT NULL,
+  image_path VARCHAR(255) NOT NULL,
+  published_at DATETIME NOT NULL,
+  is_published TINYINT(1) NOT NULL DEFAULT 1,
+  INDEX idx_news_posts_published_at (published_at),
+  INDEX idx_news_posts_is_published (is_published)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS news_gallery (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  post_id INT NOT NULL,
+  image_path VARCHAR(255) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  INDEX idx_news_gallery_post_id (post_id),
+  INDEX idx_news_gallery_sort_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------
+-- Contact / membership / people
+-- -----------------------------
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(190) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  lecturer_name VARCHAR(190) DEFAULT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_users_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS user_courses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  course_title VARCHAR(190) NOT NULL,
+  instructor VARCHAR(190) DEFAULT NULL,
+  schedule_text VARCHAR(190) DEFAULT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_courses_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  task_title VARCHAR(190) NOT NULL,
+  due_at DATETIME DEFAULT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'todo',
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_tasks_user_id (user_id),
+  INDEX idx_user_tasks_due_at (due_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  message VARCHAR(255) NOT NULL,
+  level VARCHAR(32) NOT NULL DEFAULT 'info',
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_notifications_user_id (user_id),
+  INDEX idx_user_notifications_is_read (is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS user_lecturers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  lecturer_name VARCHAR(190) NOT NULL,
+  department VARCHAR(190) DEFAULT NULL,
+  email VARCHAR(190) DEFAULT NULL,
+  office_room VARCHAR(64) DEFAULT NULL,
+  office_hours VARCHAR(190) DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_lecturers_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  phone VARCHAR(50) DEFAULT NULL,
+  message TEXT NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_contact_messages_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS membership_applications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(120) NOT NULL,
+  last_name VARCHAR(120) NOT NULL,
+  personal_id VARCHAR(30) NOT NULL,
+  phone VARCHAR(50) NOT NULL,
+  university VARCHAR(190) NOT NULL,
+  faculty VARCHAR(190) NOT NULL,
+  email VARCHAR(190) DEFAULT NULL,
+  additional_info TEXT DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_membership_applications_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS people_profiles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  page_key VARCHAR(64) NOT NULL,
+  first_name VARCHAR(120) NOT NULL,
+  last_name VARCHAR(120) NOT NULL,
+  role_title VARCHAR(180) DEFAULT NULL,
+  image_path VARCHAR(255) DEFAULT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  INDEX idx_people_profiles_page_key (page_key),
+  INDEX idx_people_profiles_sort_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------
+-- Default admin user: admin/admin
+-- Password hash generated by PHP password_hash('admin', PASSWORD_DEFAULT)
+-- -----------------------------
+INSERT INTO admins (username, password_hash)
+SELECT 'admin', '$2y$12$AwUYItlTmRoVCl7jWc/u1exQOUM0VoCO6K8jgHP3AlR3OkcM5YKnO'
+WHERE NOT EXISTS (
+  SELECT 1 FROM admins WHERE username = 'admin'
+);
+
+-- Update the hash to known value (ensures admin/admin works even if admin already exists)
+UPDATE admins
+SET password_hash = '$2y$12$AwUYItlTmRoVCl7jWc/u1exQOUM0VoCO6K8jgHP3AlR3OkcM5YKnO'
+WHERE username = 'admin';
+
+-- -----------------------------
+-- Permissions expected by app
+-- -----------------------------
+INSERT IGNORE INTO admin_permissions (admin_id, permission)
+SELECT a.id, p.permission
+FROM admins a
+JOIN (
+  SELECT 'news.view' AS permission
+  UNION ALL SELECT 'news.create'
+  UNION ALL SELECT 'news.edit'
+  UNION ALL SELECT 'news.delete'
+  UNION ALL SELECT 'people.manage'
+  UNION ALL SELECT 'contact.view'
+  UNION ALL SELECT 'membership.view'
+  UNION ALL SELECT 'university.manage'
+  UNION ALL SELECT 'admin.logs.view'
+  UNION ALL SELECT 'admins.manage'
+) p
+WHERE a.username = 'admin';
+
+-- -----------------------------
+-- Optional sample news record
+-- -----------------------------
+INSERT INTO news_posts (category, title, excerpt, content, image_path, published_at, is_published)
+SELECT
+  'განცხადება',
+  'SPG სისტემის საწყისი სიახლე',
+  'ეს არის ტესტური სიახლე სისტემის სწორად მუშაობის შესამოწმებლად.',
+  'ეს არის სრული ტექსტი. შეგიძლიათ წაშალოთ ადმინ პანელიდან.',
+  '/assets/news/uploads/news_20260209_223802_ed0ce5ed.jpg',
+  NOW(),
+  1
+WHERE NOT EXISTS (
+  SELECT 1 FROM news_posts WHERE title = 'SPG სისტემის საწყისი სიახლე'
+);
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- Optional demo portal user
+INSERT INTO users (full_name, email, lecturer_name, password_hash, created_at)
+SELECT 'Demo User', 'demo.user@spg.local', 'Prof. N. Beridze', '$2y$12$cxnO4Ul4RjjrRFjUrYAdzOsecDE0Mx23dTGHzooiqJCyuKEEZDuX.', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='demo.user@spg.local');
+
+
+INSERT INTO user_courses (user_id, course_title, instructor, schedule_text, status, created_at)
+SELECT u.id, 'Academic Writing', 'Prof. N. Beridze', 'Mon / Wed 10:00', 'active', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_courses uc WHERE uc.user_id=u.id);
+
+INSERT INTO user_tasks (user_id, task_title, due_at, status, created_at)
+SELECT u.id, 'Submit assignment #2', DATE_ADD(NOW(), INTERVAL 4 DAY), 'todo', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_tasks ut WHERE ut.user_id=u.id);
+
+INSERT INTO user_notifications (user_id, message, level, is_read, created_at)
+SELECT u.id, 'Welcome to the secure student dashboard.', 'success', 0, NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_notifications un WHERE un.user_id=u.id);
+
+
+INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at)
+SELECT u.id, 'Prof. N. Beridze', 'Humanities', 'n.beridze@spg.local', 'B-204', 'Mon 12:00-14:00', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_lecturers ul WHERE ul.user_id=u.id AND ul.lecturer_name='Prof. N. Beridze');
+
+INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at)
+SELECT u.id, 'Assoc. Prof. G. Gogelia', 'Computer Science', 'g.gogelia@spg.local', 'C-310', 'Thu 11:00-13:00', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_lecturers ul WHERE ul.user_id=u.id AND ul.lecturer_name='Assoc. Prof. G. Gogelia');
