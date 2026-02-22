@@ -35,10 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$userId, $title, $dueAt, 'todo', date('Y-m-d H:i:s')]);
         $msg = 'Task added.';
       } elseif ($action === 'add_lecturer') {
-        $name = trim((string)($_POST['lecturer_name'] ?? ''));
+        $name = normalize_lecturer_name((string)($_POST['lecturer_name'] ?? ''));
         if ($name === '') throw new RuntimeException('Lecturer name is required.');
+        $email = trim((string)($_POST['email'] ?? ''));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Lecturer email is invalid.');
         $stmt = db()->prepare('INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, $name, trim((string)($_POST['department'] ?? '')), trim((string)($_POST['email'] ?? '')), trim((string)($_POST['office_room'] ?? '')), trim((string)($_POST['office_hours'] ?? '')), date('Y-m-d H:i:s')]);
+        $stmt->execute([$userId, $name, trim((string)($_POST['department'] ?? '')), $email, trim((string)($_POST['office_room'] ?? '')), trim((string)($_POST['office_hours'] ?? '')), date('Y-m-d H:i:s')]);
         $msg = 'Lecturer added.';
       }
     } catch (Throwable $e) {
@@ -52,7 +54,8 @@ $selectedUserId = (int)($_GET['user_id'] ?? ($_POST['user_id'] ?? 0));
 $courses = $selectedUserId > 0 ? get_user_courses($selectedUserId) : [];
 $tasks = $selectedUserId > 0 ? get_user_tasks($selectedUserId) : [];
 $lecturers = $selectedUserId > 0 ? get_user_lecturers($selectedUserId) : [];
-$selectedLecturerName = trim((string)($_GET['lecturer_name'] ?? ''));
+$availableLecturers = list_available_lecturers();
+$selectedLecturerName = normalize_lecturer_name((string)($_GET['lecturer_name'] ?? ''));
 $lecturerStudents = $selectedLecturerName !== '' ? get_lecturer_students($selectedLecturerName) : [];
 ?>
 <!doctype html>
@@ -88,9 +91,19 @@ $lecturerStudents = $selectedLecturerName !== '' ? get_lecturer_students($select
 
     <div class="admin-card" style="margin-top:14px">
       <form method="get" class="grid-2">
+        <?php if($selectedUserId > 0): ?><input type="hidden" name="user_id" value="<?= $selectedUserId ?>"><?php endif; ?>
         <div>
           <label>Lecturer student list</label>
-          <input name="lecturer_name" value="<?=h($selectedLecturerName)?>" placeholder="Prof. N. Beridze">
+          <?php if($availableLecturers): ?>
+            <select name="lecturer_name">
+              <option value="">Select lecturer</option>
+              <?php foreach($availableLecturers as $ln): ?>
+                <option value="<?=h((string)$ln)?>" <?= $selectedLecturerName === (string)$ln ? 'selected' : '' ?>><?=h((string)$ln)?></option>
+              <?php endforeach; ?>
+            </select>
+          <?php else: ?>
+            <input name="lecturer_name" value="<?=h($selectedLecturerName)?>" placeholder="Prof. N. Beridze">
+          <?php endif; ?>
         </div>
         <div style="align-self:end"><button class="btn" type="submit">Show students</button></div>
       </form>

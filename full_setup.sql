@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS users (
   lecturer_name VARCHAR(190) DEFAULT NULL,
   password_hash VARCHAR(255) NOT NULL,
   created_at DATETIME NOT NULL,
-  INDEX idx_users_created_at (created_at)
+  INDEX idx_users_created_at (created_at),
+  INDEX idx_users_lecturer_name (lecturer_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 

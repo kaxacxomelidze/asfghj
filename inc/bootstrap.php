@@ -269,6 +269,11 @@ function ensure_users_table(): void {
     } catch (Throwable $e2) {
       // already exists
     }
+    try {
+      db()->exec("ALTER TABLE users ADD INDEX idx_users_lecturer_name (lecturer_name)");
+    } catch (Throwable $e3) {
+      // already exists
+    }
   } catch (Throwable $e) {
     // ignore if DB is unavailable
   }
@@ -478,6 +483,12 @@ function get_user_lecturers(int $userId): array {
   }
 }
 
+
+
+function normalize_lecturer_name(string $name): string {
+  $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+  return mb_substr($name, 0, 190);
+}
 
 function list_available_lecturers(): array {
   ensure_user_lecturers_table();

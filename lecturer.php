@@ -2,7 +2,8 @@
 $pageTitle = 'SPG Portal — Lecturer';
 require __DIR__ . '/inc/bootstrap.php';
 
-$lecturerName = trim((string)($_GET['name'] ?? ''));
+$lecturerOptions = list_available_lecturers();
+$lecturerName = normalize_lecturer_name((string)($_GET['name'] ?? ''));
 $students = $lecturerName !== '' ? get_lecturer_students($lecturerName) : [];
 include __DIR__ . '/header.php';
 ?>
@@ -14,7 +15,16 @@ include __DIR__ . '/header.php';
       <form method="get" style="margin-top:12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
         <div>
           <label for="lecturer-name">ლექტორის სახელი</label>
-          <input id="lecturer-name" name="name" value="<?=h($lecturerName)?>" placeholder="მაგ: Prof. N. Beridze" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:12px">
+          <?php if($lecturerOptions): ?>
+            <select id="lecturer-name" name="name" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:12px">
+              <option value="">აირჩიეთ ლექტორი</option>
+              <?php foreach($lecturerOptions as $ln): ?>
+                <option value="<?=h((string)$ln)?>" <?= $lecturerName === (string)$ln ? 'selected' : '' ?>><?=h((string)$ln)?></option>
+              <?php endforeach; ?>
+            </select>
+          <?php else: ?>
+            <input id="lecturer-name" name="name" value="<?=h($lecturerName)?>" placeholder="მაგ: Prof. N. Beridze" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:12px">
+          <?php endif; ?>
         </div>
         <button class="btn primary" type="submit">ნახვა</button>
       </form>

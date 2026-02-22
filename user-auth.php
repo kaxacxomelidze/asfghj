@@ -17,11 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullName = trim((string)($_POST['full_name'] ?? ''));
     $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
     $password = (string)($_POST['password'] ?? '');
-    $lecturerName = trim((string)($_POST['lecturer_name'] ?? ''));
+    $lecturerName = normalize_lecturer_name((string)($_POST['lecturer_name'] ?? ''));
 
     if ($fullName === '' || $email === '' || $password === '' || $lecturerName === '') $errors[] = 'გთხოვთ შეავსოთ ყველა ველი.';
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'ელ-ფოსტის ფორმატი არასწორია.';
     if ($password !== '' && !strong_password($password)) $errors[] = 'პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო და შეიცავდეს დიდ/პატარა ასოს და ციფრს.';
+    if ($lecturerName !== '' && $lecturerOptions && !in_array($lecturerName, $lecturerOptions, true)) {
+      $errors[] = 'აირჩიეთ ლექტორი სიიდან.';
+    }
 
     if (!$errors) {
       if (!user_login_allowed()) {
@@ -59,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'signin') {
     $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
     $password = (string)($_POST['password'] ?? '');
-    $lecturerName = trim((string)($_POST['lecturer_name'] ?? ''));
     if ($email === '' || $password === '') $errors[] = 'შეიყვანეთ ელ-ფოსტა და პაროლი.';
 
     if (!$errors) {
@@ -140,11 +142,11 @@ include __DIR__ . '/header.php';
           <input type="hidden" name="action" value="signup">
           <div>
             <label for="signup-name">სახელი და გვარი</label><br>
-            <input id="signup-name" name="full_name" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            <input id="signup-name" name="full_name" value="<?=h((string)($_POST['full_name'] ?? ''))?>" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
           </div>
           <div>
             <label for="signup-email">ელ-ფოსტა</label><br>
-            <input id="signup-email" type="email" name="email" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            <input id="signup-email" type="email" name="email" value="<?=h((string)($_POST['email'] ?? ''))?>" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
           </div>
           <div>
             <label for="signup-lecturer">თქვენი ლექტორი</label><br>
@@ -152,11 +154,11 @@ include __DIR__ . '/header.php';
               <select id="signup-lecturer" name="lecturer_name" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
                 <option value="">აირჩიეთ ლექტორი</option>
                 <?php foreach($lecturerOptions as $lectName): ?>
-                  <option value="<?=h((string)$lectName)?>"><?=h((string)$lectName)?></option>
+                  <option value="<?=h((string)$lectName)?>" <?= ((string)($_POST['lecturer_name'] ?? '') === (string)$lectName) ? 'selected' : '' ?>><?=h((string)$lectName)?></option>
                 <?php endforeach; ?>
               </select>
             <?php else: ?>
-              <input id="signup-lecturer" name="lecturer_name" required placeholder="ლექტორის სახელი" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+              <input id="signup-lecturer" name="lecturer_name" value="<?=h((string)($_POST['lecturer_name'] ?? ''))?>" required placeholder="ლექტორის სახელი" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
             <?php endif; ?>
           </div>
 
