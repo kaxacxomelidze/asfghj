@@ -100,13 +100,31 @@ function db(): PDO {
 
   $cfg = require __DIR__ . '/config.php';
   $db = $cfg['db'];
-
-  $dsn = "mysql:host={$db['host']};dbname={$db['name']};charset={$db['charset']}";
-  $pdo = new PDO($dsn, $db['user'], $db['pass'], [
+  $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  ]);
-  return $pdo;
+  ];
+
+  $dsn = "mysql:host={$db['host']};dbname={$db['name']};charset={$db['charset']}";
+  try {
+    $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+    return $pdo;
+  } catch (PDOException $e) {
+    $msg = (string)$e->getMessage();
+    $isUnknownDb = str_contains($msg, '1049') || stripos($msg, 'Unknown database') !== false;
+    if (!$isUnknownDb) {
+      throw $e;
+    }
+
+    $serverDsn = "mysql:host={$db['host']};charset={$db['charset']}";
+    $serverPdo = new PDO($serverDsn, $db['user'], $db['pass'], $options);
+    $dbName = str_replace('`', '', (string)$db['name']);
+    $charset = (string)$db['charset'];
+    $serverPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET {$charset}");
+
+    $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+    return $pdo;
+  }
 }
 
 /** Admin auth */
