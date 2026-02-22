@@ -259,10 +259,16 @@ function ensure_users_table(): void {
       id INT AUTO_INCREMENT PRIMARY KEY,
       full_name VARCHAR(190) NOT NULL,
       email VARCHAR(190) NOT NULL UNIQUE,
+      lecturer_name VARCHAR(190) DEFAULT NULL,
       password_hash VARCHAR(255) NOT NULL,
       created_at DATETIME NOT NULL,
       INDEX (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    try {
+      db()->exec("ALTER TABLE users ADD COLUMN lecturer_name VARCHAR(190) DEFAULT NULL AFTER email");
+    } catch (Throwable $e2) {
+      // already exists
+    }
   } catch (Throwable $e) {
     // ignore if DB is unavailable
   }
@@ -309,6 +315,7 @@ function current_user(): ?array {
     'id' => (int)($_SESSION['user_id'] ?? 0),
     'name' => (string)($_SESSION['user_name'] ?? ''),
     'email' => (string)($_SESSION['user_email'] ?? ''),
+    'lecturer_name' => (string)($_SESSION['user_lecturer_name'] ?? ''),
   ];
 }
 
@@ -465,6 +472,30 @@ function get_user_lecturers(int $userId): array {
   try {
     $stmt = db()->prepare('SELECT lecturer_name, department, email, office_room, office_hours FROM user_lecturers WHERE user_id=? ORDER BY id DESC');
     $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+
+function list_available_lecturers(): array {
+  ensure_user_lecturers_table();
+  try {
+    $rows = db()->query("SELECT DISTINCT lecturer_name FROM user_lecturers WHERE lecturer_name<>'' ORDER BY lecturer_name ASC")->fetchAll();
+    return array_values(array_filter(array_map(fn($r) => trim((string)($r['lecturer_name'] ?? '')), $rows)));
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+function get_lecturer_students(string $lecturerName): array {
+  ensure_users_table();
+  $lecturerName = trim($lecturerName);
+  if ($lecturerName === '') return [];
+  try {
+    $stmt = db()->prepare('SELECT id, full_name, email, created_at FROM users WHERE lecturer_name=? ORDER BY full_name ASC, id DESC');
+    $stmt->execute([$lecturerName]);
     return $stmt->fetchAll();
   } catch (Throwable $e) {
     return [];

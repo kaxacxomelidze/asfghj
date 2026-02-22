@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = (string)($_POST['action'] ?? '');
 
   if ($action === 'logout') {
-    unset($_SESSION['user_id'], $_SESSION['user_name'], $_SESSION['user_email']);
+    unset($_SESSION['user_id'], $_SESSION['user_name'], $_SESSION['user_email'], $_SESSION['user_lecturer_name']);
     session_regenerate_id(true);
     header('Location: ' . url('user-auth.php?tab=signin#dashboard'));
     exit;
@@ -87,6 +87,7 @@ include __DIR__ . '/header.php';
         <div>
           <h2 style="margin:0 0 8px">უსაფრთხო სტუდენტის Dashboard</h2>
           <p style="margin:0;color:var(--muted)">მოგესალმებით, <b><?=h((string)$user['name'])?></b> (<?=h((string)$user['email'])?>).</p>
+          <p style="margin:6px 0 0;color:var(--muted)">თქვენი ლექტორი: <b><?=h((string)($user['lecturer_name'] ?? ''))?></b></p>
         </div>
         <span style="padding:6px 12px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-weight:700;font-size:13px">Secure Portal</span>
       </div>
@@ -95,6 +96,7 @@ include __DIR__ . '/header.php';
         <a href="#university-system" class="btn">🎓 უნივერსიტეტის სისტემა</a>
         <a href="#account-security" class="btn">🔒 უსაფრთხოება</a>
         <a href="#lecturers" class="btn">👨‍🏫 ლექტორები</a>
+        <?php if(!empty($user['lecturer_name'])): ?><a href="<?=h(url('lecturer.php?name=' . urlencode((string)$user['lecturer_name'])))?>" class="btn">📋 ჩემი ლექტორის გვერდი</a><?php endif; ?>
         <a href="<?=h(url('membership.php'))?>" class="btn">🧾 გაწევრიანება</a>
       </div>
     </div>

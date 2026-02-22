@@ -52,6 +52,8 @@ $selectedUserId = (int)($_GET['user_id'] ?? ($_POST['user_id'] ?? 0));
 $courses = $selectedUserId > 0 ? get_user_courses($selectedUserId) : [];
 $tasks = $selectedUserId > 0 ? get_user_tasks($selectedUserId) : [];
 $lecturers = $selectedUserId > 0 ? get_user_lecturers($selectedUserId) : [];
+$selectedLecturerName = trim((string)($_GET['lecturer_name'] ?? ''));
+$lecturerStudents = $selectedLecturerName !== '' ? get_lecturer_students($selectedLecturerName) : [];
 ?>
 <!doctype html>
 <html lang="en">
@@ -80,6 +82,37 @@ $lecturers = $selectedUserId > 0 ? get_user_lecturers($selectedUserId) : [];
         </div>
         <div style="align-self:end"><button class="btn" type="submit">Open user system</button></div>
       </form>
+    </div>
+
+
+
+    <div class="admin-card" style="margin-top:14px">
+      <form method="get" class="grid-2">
+        <div>
+          <label>Lecturer student list</label>
+          <input name="lecturer_name" value="<?=h($selectedLecturerName)?>" placeholder="Prof. N. Beridze">
+        </div>
+        <div style="align-self:end"><button class="btn" type="submit">Show students</button></div>
+      </form>
+      <?php if($selectedLecturerName !== ''): ?>
+        <div style="margin-top:10px;overflow:auto">
+          <table class="admin-table">
+            <thead><tr><th>#</th><th>Student</th><th>Email</th><th>Registered</th></tr></thead>
+            <tbody>
+              <?php if(!$lecturerStudents): ?>
+                <tr><td colspan="4">No students for this lecturer yet.</td></tr>
+              <?php else: foreach($lecturerStudents as $i=>$st): ?>
+                <tr>
+                  <td><?= $i+1 ?></td>
+                  <td><?= h((string)$st['full_name']) ?></td>
+                  <td><?= h((string)$st['email']) ?></td>
+                  <td><?= h((string)$st['created_at']) ?></td>
+                </tr>
+              <?php endforeach; endif; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
     </div>
 
     <?php if($selectedUserId > 0): ?>
