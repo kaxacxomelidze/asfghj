@@ -69,6 +69,53 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+CREATE TABLE IF NOT EXISTS user_courses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  course_title VARCHAR(190) NOT NULL,
+  instructor VARCHAR(190) DEFAULT NULL,
+  schedule_text VARCHAR(190) DEFAULT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_courses_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  task_title VARCHAR(190) NOT NULL,
+  due_at DATETIME DEFAULT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'todo',
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_tasks_user_id (user_id),
+  INDEX idx_user_tasks_due_at (due_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  message VARCHAR(255) NOT NULL,
+  level VARCHAR(32) NOT NULL DEFAULT 'info',
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_notifications_user_id (user_id),
+  INDEX idx_user_notifications_is_read (is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS user_lecturers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  lecturer_name VARCHAR(190) NOT NULL,
+  department VARCHAR(190) DEFAULT NULL,
+  email VARCHAR(190) DEFAULT NULL,
+  office_room VARCHAR(64) DEFAULT NULL,
+  office_hours VARCHAR(190) DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_user_lecturers_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
@@ -162,3 +209,35 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT INTO users (full_name, email, password_hash, created_at)
 SELECT 'Demo User', 'demo.user@spg.local', '$2y$12$cxnO4Ul4RjjrRFjUrYAdzOsecDE0Mx23dTGHzooiqJCyuKEEZDuX.', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='demo.user@spg.local');
+
+
+INSERT INTO user_courses (user_id, course_title, instructor, schedule_text, status, created_at)
+SELECT u.id, 'Academic Writing', 'Prof. N. Beridze', 'Mon / Wed 10:00', 'active', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_courses uc WHERE uc.user_id=u.id);
+
+INSERT INTO user_tasks (user_id, task_title, due_at, status, created_at)
+SELECT u.id, 'Submit assignment #2', DATE_ADD(NOW(), INTERVAL 4 DAY), 'todo', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_tasks ut WHERE ut.user_id=u.id);
+
+INSERT INTO user_notifications (user_id, message, level, is_read, created_at)
+SELECT u.id, 'Welcome to the secure student dashboard.', 'success', 0, NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_notifications un WHERE un.user_id=u.id);
+
+
+INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at)
+SELECT u.id, 'Prof. N. Beridze', 'Humanities', 'n.beridze@spg.local', 'B-204', 'Mon 12:00-14:00', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_lecturers ul WHERE ul.user_id=u.id AND ul.lecturer_name='Prof. N. Beridze');
+
+INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at)
+SELECT u.id, 'Assoc. Prof. G. Gogelia', 'Computer Science', 'g.gogelia@spg.local', 'C-310', 'Thu 11:00-13:00', NOW()
+FROM users u
+WHERE u.email='demo.user@spg.local'
+  AND NOT EXISTS (SELECT 1 FROM user_lecturers ul WHERE ul.user_id=u.id AND ul.lecturer_name='Assoc. Prof. G. Gogelia');

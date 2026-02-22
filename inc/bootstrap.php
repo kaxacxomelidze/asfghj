@@ -81,6 +81,15 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     exit("Headers already sent in: {$file} on line {$line}. Make sure every page loads bootstrap.php BEFORE header.php.");
   }
   session_name($config['app']['session_name'] ?? 'SPGSESSID');
+  $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+  session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $secureCookie,
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
   session_start();
 }
 
@@ -218,6 +227,37 @@ function is_user_logged_in(): bool {
   return !empty($_SESSION['user_id']);
 }
 
+function user_login_allowed(): bool {
+  $lockUntil = (int)($_SESSION['user_login_lock_until'] ?? 0);
+  return $lockUntil <= time();
+}
+
+function user_login_lock_remaining(): int {
+  $lockUntil = (int)($_SESSION['user_login_lock_until'] ?? 0);
+  return max(0, $lockUntil - time());
+}
+
+function user_login_register_failure(): void {
+  $fails = (int)($_SESSION['user_login_failures'] ?? 0) + 1;
+  $_SESSION['user_login_failures'] = $fails;
+  if ($fails >= 5) {
+    $_SESSION['user_login_lock_until'] = time() + 300;
+    $_SESSION['user_login_failures'] = 0;
+  }
+}
+
+function user_login_register_success(): void {
+  unset($_SESSION['user_login_failures'], $_SESSION['user_login_lock_until']);
+}
+
+function strong_password(string $password): bool {
+  if (strlen($password) < 8) return false;
+  if (!preg_match('/[A-Z]/', $password)) return false;
+  if (!preg_match('/[a-z]/', $password)) return false;
+  if (!preg_match('/\d/', $password)) return false;
+  return true;
+}
+
 function current_user(): ?array {
   if (!is_user_logged_in()) return null;
   return [
@@ -225,6 +265,165 @@ function current_user(): ?array {
     'name' => (string)($_SESSION['user_name'] ?? ''),
     'email' => (string)($_SESSION['user_email'] ?? ''),
   ];
+}
+
+function ensure_user_courses_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS user_courses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      course_title VARCHAR(190) NOT NULL,
+      instructor VARCHAR(190) DEFAULT NULL,
+      schedule_text VARCHAR(190) DEFAULT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'active',
+      created_at DATETIME NOT NULL,
+      INDEX idx_user_courses_user_id (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function ensure_user_tasks_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS user_tasks (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      task_title VARCHAR(190) NOT NULL,
+      due_at DATETIME DEFAULT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'todo',
+      created_at DATETIME NOT NULL,
+      INDEX idx_user_tasks_user_id (user_id),
+      INDEX idx_user_tasks_due_at (due_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function ensure_user_notifications_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS user_notifications (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      message VARCHAR(255) NOT NULL,
+      level VARCHAR(32) NOT NULL DEFAULT 'info',
+      is_read TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL,
+      INDEX idx_user_notifications_user_id (user_id),
+      INDEX idx_user_notifications_is_read (is_read)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+
+function ensure_user_lecturers_table(): void {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS user_lecturers (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      lecturer_name VARCHAR(190) NOT NULL,
+      department VARCHAR(190) DEFAULT NULL,
+      email VARCHAR(190) DEFAULT NULL,
+      office_room VARCHAR(64) DEFAULT NULL,
+      office_hours VARCHAR(190) DEFAULT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX idx_user_lecturers_user_id (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function seed_user_dashboard_data(int $userId): void {
+  ensure_user_courses_table();
+  ensure_user_tasks_table();
+  ensure_user_notifications_table();
+  ensure_user_lecturers_table();
+  try {
+    $stmt = db()->prepare('SELECT COUNT(*) FROM user_courses WHERE user_id=?');
+    $stmt->execute([$userId]);
+    $hasCourses = (int)$stmt->fetchColumn() > 0;
+    if (!$hasCourses) {
+      $now = date('Y-m-d H:i:s');
+      $courseStmt = db()->prepare('INSERT INTO user_courses (user_id, course_title, instructor, schedule_text, status, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+      $courseStmt->execute([$userId, 'Academic Writing', 'Prof. N. Beridze', 'Mon / Wed 10:00', 'active', $now]);
+      $courseStmt->execute([$userId, 'Computer Science Basics', 'Prof. G. Gogelia', 'Tue / Thu 13:00', 'active', $now]);
+
+      $taskStmt = db()->prepare('INSERT INTO user_tasks (user_id, task_title, due_at, status, created_at) VALUES (?, ?, ?, ?, ?)');
+      $taskStmt->execute([$userId, 'Submit assignment #2', date('Y-m-d H:i:s', strtotime('+4 days')), 'todo', $now]);
+      $taskStmt->execute([$userId, 'Prepare lab report', date('Y-m-d H:i:s', strtotime('+7 days')), 'todo', $now]);
+
+      $notifStmt = db()->prepare('INSERT INTO user_notifications (user_id, message, level, is_read, created_at) VALUES (?, ?, ?, 0, ?)');
+      $notifStmt->execute([$userId, 'Welcome to the secure student dashboard.', 'success', $now]);
+      $notifStmt->execute([$userId, 'Remember to complete your profile information.', 'info', $now]);
+
+      $lecturerStmt = db()->prepare('INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      $lecturerStmt->execute([$userId, 'Prof. N. Beridze', 'Humanities', 'n.beridze@spg.local', 'B-204', 'Mon 12:00-14:00', $now]);
+      $lecturerStmt->execute([$userId, 'Assoc. Prof. G. Gogelia', 'Computer Science', 'g.gogelia@spg.local', 'C-310', 'Thu 11:00-13:00', $now]);
+    }
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function get_user_courses(int $userId): array {
+  ensure_user_courses_table();
+  try {
+    $stmt = db()->prepare('SELECT course_title, instructor, schedule_text, status FROM user_courses WHERE user_id=? ORDER BY id DESC');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+function get_user_tasks(int $userId): array {
+  ensure_user_tasks_table();
+  try {
+    $stmt = db()->prepare('SELECT task_title, due_at, status FROM user_tasks WHERE user_id=? ORDER BY (due_at IS NULL), due_at ASC, id DESC');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+function get_user_notifications(int $userId): array {
+  ensure_user_notifications_table();
+  try {
+    $stmt = db()->prepare('SELECT id, message, level, is_read, created_at FROM user_notifications WHERE user_id=? ORDER BY created_at DESC, id DESC LIMIT 8');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+}
+
+
+function get_user_lecturers(int $userId): array {
+  ensure_user_lecturers_table();
+  try {
+    $stmt = db()->prepare('SELECT lecturer_name, department, email, office_room, office_hours FROM user_lecturers WHERE user_id=? ORDER BY id DESC');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
 }
 
 /** Helpers for news */

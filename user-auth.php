@@ -19,7 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($fullName === '' || $email === '' || $password === '') $errors[] = 'გთხოვთ შეავსოთ ყველა ველი.';
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'ელ-ფოსტის ფორმატი არასწორია.';
-    if ($password !== '' && strlen($password) < 6) $errors[] = 'პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო.';
+    if ($password !== '' && !strong_password($password)) $errors[] = 'პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო და შეიცავდეს დიდ/პატარა ასოს და ციფრს.';
+
+    if (!$errors) {
+      if (!user_login_allowed()) {
+        $errors[] = 'ძალიან ბევრი მცდელობა. სცადეთ თავიდან ' . user_login_lock_remaining() . ' წამში.';
+      }
+    }
 
     if (!$errors) {
       try {
@@ -35,9 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $_SESSION['user_id'] = $userId;
           $_SESSION['user_name'] = $fullName;
           $_SESSION['user_email'] = $email;
+          user_login_register_success();
           header('Location: ' . url('user-dashboard.php'));
           exit;
         }
+        user_login_register_failure();
       } catch (Throwable $e) {
         $errors[] = 'რეგისტრაცია ვერ შესრულდა. სცადეთ მოგვიანებით.';
       }
@@ -51,6 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') $errors[] = 'შეიყვანეთ ელ-ფოსტა და პაროლი.';
 
     if (!$errors) {
+      if (!user_login_allowed()) {
+        $errors[] = 'ძალიან ბევრი მცდელობა. სცადეთ თავიდან ' . user_login_lock_remaining() . ' წამში.';
+      }
+    }
+
+    if (!$errors) {
       try {
         $stmt = db()->prepare('SELECT id, full_name, email, password_hash FROM users WHERE email=? LIMIT 1');
         $stmt->execute([$email]);
@@ -60,9 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $_SESSION['user_id'] = (int)$user['id'];
           $_SESSION['user_name'] = (string)$user['full_name'];
           $_SESSION['user_email'] = (string)$user['email'];
+          user_login_register_success();
           header('Location: ' . url('user-dashboard.php'));
           exit;
         }
+        user_login_register_failure();
       } catch (Throwable $e) {
         // ignore details
       }
@@ -128,6 +144,7 @@ include __DIR__ . '/header.php';
           <div>
             <label for="signup-pass">პაროლი</label><br>
             <input id="signup-pass" type="password" name="password" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+            <small style="color:var(--muted)">მინიმუმ 8 სიმბოლო, დიდი/პატარა ასო და ციფრი.</small>
           </div>
           <button type="submit" style="padding:12px 14px;border-radius:12px;border:0;background:#0ea5e9;color:#fff;font-weight:800;cursor:pointer">რეგისტრაცია</button>
         </form>
