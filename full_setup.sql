@@ -72,6 +72,17 @@ CREATE TABLE IF NOT EXISTS news_gallery (
   INDEX idx_news_gallery_sort_order (sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+CREATE TABLE IF NOT EXISTS partner_logos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  image_path VARCHAR(255) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL,
+  INDEX idx_partner_logos_sort_order (sort_order),
+  INDEX idx_partner_logos_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- -----------------------------
 -- Contact / membership / people
 -- -----------------------------
@@ -195,6 +206,7 @@ JOIN (
   UNION ALL SELECT 'news.create'
   UNION ALL SELECT 'news.edit'
   UNION ALL SELECT 'news.delete'
+  UNION ALL SELECT 'partners.manage'
   UNION ALL SELECT 'people.manage'
   UNION ALL SELECT 'contact.view'
   UNION ALL SELECT 'membership.view'
@@ -220,6 +232,21 @@ FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM news_posts WHERE title = 'SPG სისტემის საწყისი სიახლე'
 );
+
+
+
+-- -----------------------------
+-- Optional sample partners logos
+-- -----------------------------
+INSERT INTO partner_logos (image_path, sort_order, is_active, created_at)
+SELECT 'assets/partners/demo_partner_01.png', 10, 1, NOW()
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM partner_logos WHERE image_path='assets/partners/demo_partner_01.png');
+
+INSERT INTO partner_logos (image_path, sort_order, is_active, created_at)
+SELECT 'assets/partners/demo_partner_02.png', 20, 1, NOW()
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM partner_logos WHERE image_path='assets/partners/demo_partner_02.png');
 
 SET FOREIGN_KEY_CHECKS = 1;
 
