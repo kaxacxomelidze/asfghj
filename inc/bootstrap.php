@@ -49,13 +49,28 @@ if (BASE_URL === '') {
 /** Build absolute URL within this project */
 function url(string $path = ''): string {
   $base = AUTO_BASE_URL;
-  $path = '/' . ltrim($path, '/');
+  $path = ltrim($path, '/');
+
+  if ($path !== '' && !str_starts_with($path, 'admin/')) {
+    $path = preg_replace('/\.php(?=($|[?#]))/i', '', $path) ?? $path;
+  }
+
+  $path = '/' . $path;
   if ($base === '' || $base === '/') return $path;
   return $base . $path;
 }
 
 /** Escape HTML */
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+
+
+/** Current absolute URL for canonical tags */
+function current_url(): string {
+  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+  $uri = $_SERVER['REQUEST_URI'] ?? url('/');
+  return $scheme . '://' . $host . $uri;
+}
 
 /** Normalize user-provided image paths */
 function normalize_image_path(string $path): string {
