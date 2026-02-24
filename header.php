@@ -4,7 +4,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : "SPG Header"; ?></title>
+  <?php
+    $orgName = "საქართველოს სტუდენტური პარლამენტი და მთავრობა";
+    $metaTitle = isset($pageTitle) ? htmlspecialchars((string)$pageTitle, ENT_QUOTES, "UTF-8") : $orgName;
+    $metaDescription = isset($metaDescription) ? htmlspecialchars((string)$metaDescription, ENT_QUOTES, "UTF-8") : "ოფიციალური ვებგვერდი — სიახლეები, პროექტები, სტუდენტური პარლამენტი და მთავრობა.";
+    $canonicalUrl = isset($canonicalUrl) ? (string)$canonicalUrl : current_url();
+  ?>
+  <title><?= $metaTitle ?></title>
+  <meta name="description" content="<?= $metaDescription ?>" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="canonical" href="<?= h($canonicalUrl) ?>" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="<?= h($orgName) ?>" />
+  <meta property="og:title" content="<?= $metaTitle ?>" />
+  <meta property="og:description" content="<?= $metaDescription ?>" />
+  <meta property="og:url" content="<?= h($canonicalUrl) ?>" />
 
   <style>
     :root {
@@ -266,9 +280,13 @@
     @media (max-width: 560px){
       /* on very small phones */
       .brandbar{padding:14px 0}
-      .logoImg{height:64px}
-      .leftActions .btn.signin{padding:11px 12px}
-      .actions .btn.primary{padding:11px 12px}
+      .logoImg{height:58px}
+      .leftActions .btn.signin{padding:10px 11px;font-size:13px}
+      .actions .btn.primary{padding:10px 11px;font-size:13px}
+      .topbar__left .pill:nth-child(3){display:none}
+      .topbar__inner{gap:8px}
+      .lang button{padding:6px 8px;font-size:12px}
+      .mobile a{font-size:14px}
     }
   </style>
 </head>
@@ -299,7 +317,7 @@
           <a class="btn signin" href="<?=h(url('user-auth.php#dashboard'))?>" data-i18n="header.signin">🔐 Sign in</a>
         </div>
 
-        <a class="brand" href="index.php#home" aria-label="Home">
+        <a class="brand" href="<?=h(url('index#home'))?>" aria-label="Home">
           <img class="logoImg" src="cropped-cropped-IMG_9728.png" alt="SPG Logo" />
         </a>
 
@@ -313,7 +331,7 @@
     <div class="navbar">
       <div class="container navbar__inner">
         <nav class="nav" aria-label="Main">
-          <a class="active" href="index.php#home" data-i18n="nav.home">მთავარი</a>
+          <a class="active" href="<?=h(url('index#home'))?>" data-i18n="nav.home">მთავარი</a>
           <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
 
           <div class="drop" data-drop="about">
@@ -325,7 +343,7 @@
               <a href="<?=h(url('mission.php'))?>" data-i18n="nav.aboutMission">მისია</a>
               <a href="<?=h(url('vision.php'))?>" data-i18n="nav.aboutVision">ხედვა</a>
               <a href="<?=h(url('structure.php'))?>" data-i18n="nav.aboutStructure">სტრუქტურა</a>
-              <a href="index.php#about-career" data-i18n="nav.aboutCareer">კარიერული განვითარების გეგმა</a>
+              <a href="<?=h(url('index#about-career'))?>" data-i18n="nav.aboutCareer">კარიერული განვითარების გეგმა</a>
               <a href="<?=h(url('message.php'))?>" data-i18n="nav.aboutMessage">ხელმძღვანელის მიმართვა</a>
             </div>
           </div>
@@ -347,7 +365,7 @@
       </div>
 
       <div class="container mobile" id="mobile">
-        <a href="index.php#home" data-i18n="nav.home">მთავარი</a>
+        <a href="<?=h(url('index#home'))?>" data-i18n="nav.home">მთავარი</a>
         <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
         <a href="<?=h(url('history.php'))?>" data-i18n="nav.about">ჩვენს შესახებ</a>
         <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.team">გუნდი</a>

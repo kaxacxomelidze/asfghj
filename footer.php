@@ -146,6 +146,13 @@
     }
   }
 
+  @media (max-width: 768px){
+    .footerGrid{
+      grid-template-columns: 1fr;
+      gap:20px;
+    }
+  }
+
   @media (max-width: 560px){
     .footerWrap{padding:40px 0 26px}
     .footerGrid{
@@ -169,7 +176,7 @@
         <div class="footerBrandTop">
           <img src="spg_logo2.png" alt="SPG Logo" />
           <div>
-            <strong>SPG Portal</strong>
+            <strong>საქართველოს სტუდენტური პარლამენტი და მთავრობა</strong>
             <small>Student Platform & Official Updates</small>
           </div>
         </div>
@@ -183,19 +190,19 @@
       <!-- Navigation -->
       <div class="footerCol">
         <h4>ნავიგაცია</h4>
-        <a class="footerLink" href="index.php#home">მთავარი</a>
-        <a class="footerLink" href="index.php#news">სიახლეები</a>
-        <a class="footerLink" href="index.php#about-history">ჩვენს შესახებ</a>
-        <a class="footerLink" href="index.php#contact">კონტაქტი</a>
+        <a class="footerLink" href="<?=h(url('index#home'))?>">მთავარი</a>
+        <a class="footerLink" href="<?=h(url('index#news'))?>">სიახლეები</a>
+        <a class="footerLink" href="<?=h(url('index#about-history'))?>">ჩვენს შესახებ</a>
+        <a class="footerLink" href="<?=h(url('index#contact'))?>">კონტაქტი</a>
       </div>
 
       <!-- Team -->
       <div class="footerCol">
         <h4>გუნდი</h4>
-        <a class="footerLink" href="pr-event.php">PR & Event</a>
-        <a class="footerLink" href="aparati.php">აპარატი</a>
-        <a class="footerLink" href="parlament.php">სტუდენტური პარლამენტი</a>
-        <a class="footerLink" href="gov.php">სტუდენტური მთავრობა</a>
+        <a class="footerLink" href="<?=h(url('pr-event'))?>">PR & Event</a>
+        <a class="footerLink" href="<?=h(url('aparati'))?>">აპარატი</a>
+        <a class="footerLink" href="<?=h(url('parlament'))?>">სტუდენტური პარლამენტი</a>
+        <a class="footerLink" href="<?=h(url('gov'))?>">სტუდენტური მთავრობა</a>
       </div>
 
       <!-- Contact -->
@@ -223,7 +230,7 @@
 
   <div class="footerBottom">
     <div class="container footerBottomInner">
-      <span>© <?php echo date("Y"); ?> SPG Portal. All rights reserved.</span>
+      <span>© <?php echo date("Y"); ?> საქართველოს სტუდენტური პარლამენტი და მთავრობა. All rights reserved.</span>
       <span>Official Student Platform</span>
     </div>
   </div>
