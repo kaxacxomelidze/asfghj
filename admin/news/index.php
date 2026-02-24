@@ -5,7 +5,13 @@ require __DIR__ . '/../_ui.php';
 require_admin();
 require_permission('news.view');
 
-$rows = db()->query('SELECT id, category, title, published_at, is_published FROM news_posts ORDER BY published_at DESC, id DESC')->fetchAll();
+ensure_news_posts_table();
+$rows = [];
+try {
+  $rows = db()->query('SELECT id, category, title, published_at, is_published FROM news_posts ORDER BY published_at DESC, id DESC')->fetchAll();
+} catch (Throwable $e) {
+  $rows = [];
+}
 $total = count($rows);
 $published = 0;
 foreach ($rows as $row) {

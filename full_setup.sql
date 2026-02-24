@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS admin_permissions (
 -- -----------------------------
 -- Admin security logs
 -- -----------------------------
-
 CREATE TABLE IF NOT EXISTS admin_login_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(120) NOT NULL,
@@ -76,7 +75,6 @@ CREATE TABLE IF NOT EXISTS news_gallery (
 -- -----------------------------
 -- Contact / membership / people
 -- -----------------------------
-
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(190) NOT NULL,
@@ -87,7 +85,6 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_created_at (created_at),
   INDEX idx_users_lecturer_name (lecturer_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 
 CREATE TABLE IF NOT EXISTS user_courses (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -121,7 +118,6 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   INDEX idx_user_notifications_user_id (user_id),
   INDEX idx_user_notifications_is_read (is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 
 CREATE TABLE IF NOT EXISTS user_lecturers (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,6 +174,7 @@ CREATE TABLE IF NOT EXISTS people_profiles (
 -- -----------------------------
 INSERT INTO admins (username, password_hash)
 SELECT 'admin', '$2y$12$AwUYItlTmRoVCl7jWc/u1exQOUM0VoCO6K8jgHP3AlR3OkcM5YKnO'
+FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM admins WHERE username = 'admin'
 );
@@ -219,18 +216,18 @@ SELECT
   '/assets/news/uploads/news_20260209_223802_ed0ce5ed.jpg',
   NOW(),
   1
+FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM news_posts WHERE title = 'SPG სისტემის საწყისი სიახლე'
 );
 
 SET FOREIGN_KEY_CHECKS = 1;
 
-
 -- Optional demo portal user
 INSERT INTO users (full_name, email, lecturer_name, password_hash, created_at)
 SELECT 'Demo User', 'demo.user@spg.local', 'Prof. N. Beridze', '$2y$12$cxnO4Ul4RjjrRFjUrYAdzOsecDE0Mx23dTGHzooiqJCyuKEEZDuX.', NOW()
+FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='demo.user@spg.local');
-
 
 INSERT INTO user_courses (user_id, course_title, instructor, schedule_text, status, created_at)
 SELECT u.id, 'Academic Writing', 'Prof. N. Beridze', 'Mon / Wed 10:00', 'active', NOW()
@@ -249,7 +246,6 @@ SELECT u.id, 'Welcome to the secure student dashboard.', 'success', 0, NOW()
 FROM users u
 WHERE u.email='demo.user@spg.local'
   AND NOT EXISTS (SELECT 1 FROM user_notifications un WHERE un.user_id=u.id);
-
 
 INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at)
 SELECT u.id, 'Prof. N. Beridze', 'Humanities', 'n.beridze@spg.local', 'B-204', 'Mon 12:00-14:00', NOW()

@@ -25,8 +25,9 @@ try {
 
     <div class="grid-3">
       <div class="admin-card"><label>Total records</label><div style="font-size:30px;font-weight:900"><?=count($rows)?></div></div>
-      <div class="admin-card"><label>Success</label><div style="font-size:30px;font-weight:900;color:#86efac"><?=count(array_filter($rows, fn($r)=>(string)$r['status']==='success'))?></div></div>
-      <div class="admin-card"><label>Failed/Blocked</label><div style="font-size:30px;font-weight:900;color:#fca5a5"><?=count(array_filter($rows, fn($r)=>(string)$r['status']!=='success'))?></div></div>
+      <?php $successCount = 0; foreach($rows as $r){ if((string)$r['status']==='success') $successCount++; } $failedCount = count($rows) - $successCount; ?>
+      <div class="admin-card"><label>Success</label><div style="font-size:30px;font-weight:900;color:#86efac"><?= $successCount ?></div></div>
+      <div class="admin-card"><label>Failed/Blocked</label><div style="font-size:30px;font-weight:900;color:#fca5a5"><?= $failedCount ?></div></div>
     </div>
 
     <div class="admin-card" style="margin-top:14px">

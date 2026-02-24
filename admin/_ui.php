@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function admin_head(string $title): void {
+function admin_head($title) {
   ?>
   <head>
     <meta charset="utf-8">
@@ -12,7 +12,7 @@ function admin_head(string $title): void {
   <?php
 }
 
-function admin_topbar(string $title, array $links = []): void {
+function admin_topbar($title, $links = []) {
   static $rendered = false;
   if ($rendered) {
     return;

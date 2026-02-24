@@ -13,44 +13,132 @@ $error = '';
 
 /**
  * Absolute upload directory: /assets/people/uploads
+ * Uses realpath to avoid path ambiguity / symlink issues.
  */
 function people_upload_dir_abs(): string
 {
-    return dirname(__DIR__, 2)
+    // This file is expected at: /public/admin/people/index.php
+    // Go up 2 levels => /public
+    $publicRoot = realpath(__DIR__ . '/../../');
+    if ($publicRoot === false) {
+        throw new RuntimeException('Cannot resolve public root path.');
+    }
+
+    return $publicRoot
         . DIRECTORY_SEPARATOR . 'assets'
         . DIRECTORY_SEPARATOR . 'people'
         . DIRECTORY_SEPARATOR . 'uploads';
 }
 
 /**
+ * Absolute public root path (used for delete helper).
+ */
+function people_public_root_abs(): string
+{
+    $publicRoot = realpath(__DIR__ . '/../../');
+    if ($publicRoot === false) {
+        throw new RuntimeException('Cannot resolve public root path.');
+    }
+    return $publicRoot;
+}
+
+/**
  * Stores uploaded image into /assets/people/uploads/
  * Returns relative path: assets/people/uploads/filename.ext
+ * Throws RuntimeException on failure with actual reason
  */
-function store_people_upload(array $file): ?string
+function store_people_upload(array $file): string
 {
-    $tmpName  = (string)($file['tmp_name'] ?? '');
-    $origName = (string)($file['name'] ?? '');
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    $tmpName     = (string)($file['tmp_name'] ?? '');
+    $origName    = (string)($file['name'] ?? '');
 
-    if ($origName === '' || $tmpName === '' || !is_uploaded_file($tmpName)) {
-        return null;
+    // PHP-level upload errors
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        $map = [
+            UPLOAD_ERR_INI_SIZE   => 'Uploaded file is too large (php.ini upload_max_filesize).',
+            UPLOAD_ERR_FORM_SIZE  => 'Uploaded file is too large (form limit).',
+            UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
+            UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload directory.',
+            UPLOAD_ERR_CANT_WRITE => 'Server cannot write uploaded file to disk.',
+            UPLOAD_ERR_EXTENSION  => 'A PHP extension stopped the upload.',
+        ];
+        throw new RuntimeException($map[$uploadError] ?? ('Upload error code: ' . $uploadError));
+    }
+
+    if ($origName === '' || $tmpName === '') {
+        throw new RuntimeException('Uploaded file data is missing.');
+    }
+
+    if (!is_uploaded_file($tmpName)) {
+        throw new RuntimeException('Temporary uploaded file is invalid.');
     }
 
     $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
     if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-        return null;
+        throw new RuntimeException('Allowed formats: jpg, jpeg, png, webp.');
+    }
+
+    // MIME validation (recommended)
+    $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+    $mime  = $finfo ? finfo_file($finfo, $tmpName) : null;
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    $allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+    ];
+
+    if ($mime !== null && !in_array($mime, $allowedMimes, true)) {
+        throw new RuntimeException('Invalid image MIME type: ' . $mime);
     }
 
     $dir = people_upload_dir_abs();
-    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
-        return null;
+
+    if (!is_dir($dir)) {
+        if (!mkdir($dir, 0775, true) && !is_dir($dir)) {
+            throw new RuntimeException('Failed to create upload directory: ' . $dir);
+        }
     }
 
-    $filename = 'person_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $destAbs  = $dir . DIRECTORY_SEPARATOR . $filename;
+    // Real write test (more reliable than is_writable() on some hosts)
+    try {
+        $probe = $dir . DIRECTORY_SEPARATOR . '.write_test_' . bin2hex(random_bytes(4));
+    } catch (Throwable $e) {
+        throw new RuntimeException('Failed to generate write-test filename.');
+    }
+
+    if (@file_put_contents($probe, '1') === false) {
+        $last = error_get_last();
+        throw new RuntimeException(
+            'Upload directory is not writable: ' . $dir .
+            (!empty($last['message']) ? ' | ' . $last['message'] : '')
+        );
+    }
+    @unlink($probe);
+
+    try {
+        $filename = 'person_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    } catch (Throwable $e) {
+        throw new RuntimeException('Failed to generate secure filename.');
+    }
+
+    $destAbs = $dir . DIRECTORY_SEPARATOR . $filename;
 
     if (!move_uploaded_file($tmpName, $destAbs)) {
-        return null;
+        $last = error_get_last();
+        throw new RuntimeException(
+            'Failed to move uploaded file into uploads directory.' .
+            (!empty($last['message']) ? ' | ' . $last['message'] : '')
+        );
     }
+
+    // Optional: safer file perms for uploaded files
+    @chmod($destAbs, 0644);
 
     return 'assets/people/uploads/' . $filename;
 }
@@ -61,14 +149,22 @@ function store_people_upload(array $file): ?string
 function delete_people_upload_if_local(string $imagePath): void
 {
     $imagePath = trim($imagePath);
-    if ($imagePath === '') return;
+    if ($imagePath === '') {
+        return;
+    }
 
-    // only allow deleting files in our uploads folder
+    // Only allow deleting files in our uploads folder
     if (strpos($imagePath, 'assets/people/uploads/') !== 0) {
         return;
     }
 
-    $abs = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $imagePath);
+    try {
+        $base = people_public_root_abs();
+    } catch (Throwable $e) {
+        return;
+    }
+
+    $abs = $base . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $imagePath);
 
     if (is_file($abs)) {
         @unlink($abs);
@@ -118,11 +214,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // If file uploaded, it overrides image_path
             if (!empty($_FILES['image_file']['name'])) {
-                $uploaded = store_people_upload($_FILES['image_file']);
-                if ($uploaded === null) {
-                    $error = 'Image upload failed. Allowed: jpg, jpeg, png, webp';
-                } else {
-                    $imagePath = $uploaded;
+                try {
+                    $imagePath = store_people_upload($_FILES['image_file']);
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
                 }
             }
 
@@ -159,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($firstName === '' || $lastName === '') {
             $error = 'First name and last name are required';
         } else {
-            // default to old image if user didn't provide new
+            // Default to old image if user didn't provide new
             $finalImage = (string)($current['image_path'] ?? '');
 
             // If user typed new image_path, use it
@@ -169,13 +264,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // If file uploaded, it overrides image_path
             if (!empty($_FILES['image_file']['name'])) {
-                $uploaded = store_people_upload($_FILES['image_file']);
-                if ($uploaded === null) {
-                    $error = 'Image upload failed. Allowed: jpg, jpeg, png, webp';
-                } else {
-                    // delete old local upload (optional)
+                try {
+                    $uploaded = store_people_upload($_FILES['image_file']);
+
+                    // Delete old local upload (optional)
                     delete_people_upload_if_local((string)($current['image_path'] ?? ''));
+
                     $finalImage = $uploaded;
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
                 }
             }
 
@@ -190,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . url('admin/people/index.php'));
                 exit;
             } else {
-                // keep edit mode if error
+                // Keep edit mode if error
                 $editId = $id;
                 $editRow = $current;
             }
@@ -203,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             $current = people_find($id);
             if ($current) {
-                // delete local file (optional)
+                // Delete local file (optional)
                 delete_people_upload_if_local((string)($current['image_path'] ?? ''));
             }
 
@@ -224,10 +321,14 @@ $rows = db()->query(
 )->fetchAll();
 
 $pageTotals = [];
-foreach ($pageLabels as $k => $_l) $pageTotals[$k] = 0;
+foreach ($pageLabels as $k => $_l) {
+    $pageTotals[$k] = 0;
+}
 foreach ($rows as $r) {
     $k = (string)$r['page_key'];
-    if (isset($pageTotals[$k])) $pageTotals[$k]++;
+    if (isset($pageTotals[$k])) {
+        $pageTotals[$k]++;
+    }
 }
 
 ?>
@@ -243,9 +344,33 @@ foreach ($rows as $r) {
     ]); ?>
 
     <div class="grid-3">
-      <div class="admin-card"><label>Total team members</label><div style="font-size:30px;font-weight:900"><?= count($rows) ?></div></div>
-      <div class="admin-card"><label>Pages covered</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= count(array_filter($pageTotals, fn($n)=>$n>0)) ?></div></div>
-      <div class="admin-card"><label>Largest section</label><div style="font-size:15px;font-weight:700;color:#cbd5e1"><?php $mx=0;$mk='—'; foreach($pageTotals as $k=>$n){ if($n>$mx){$mx=$n;$mk=$pageLabels[$k];}} echo h((string)$mk); ?></div></div>
+        <div class="admin-card">
+            <label>Total team members</label>
+            <div style="font-size:30px;font-weight:900"><?= count($rows) ?></div>
+        </div>
+
+        <?php $coveredPages = 0; foreach ($pageTotals as $n) { if ($n > 0) $coveredPages++; } ?>
+        <div class="admin-card">
+            <label>Pages covered</label>
+            <div style="font-size:30px;font-weight:900;color:#93c5fd"><?= $coveredPages ?></div>
+        </div>
+
+        <div class="admin-card">
+            <label>Largest section</label>
+            <div style="font-size:15px;font-weight:700;color:#cbd5e1">
+                <?php
+                $mx = 0;
+                $mk = '—';
+                foreach ($pageTotals as $k => $n) {
+                    if ($n > $mx) {
+                        $mx = $n;
+                        $mk = $pageLabels[$k];
+                    }
+                }
+                echo h((string)$mk);
+                ?>
+            </div>
+        </div>
     </div>
 
     <?php if ($editId > 0 && $editRow): ?>

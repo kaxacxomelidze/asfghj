@@ -20,7 +20,8 @@ $rows = db()->query('SELECT id, name, email, phone, message, created_at FROM con
 
     <div class="grid-3">
       <div class="admin-card"><label>Total</label><div style="font-size:30px;font-weight:900"><?= count($rows) ?></div></div>
-      <div class="admin-card"><label>Today</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= count(array_filter($rows, fn($r) => str_starts_with((string)$r['created_at'], date('Y-m-d')))) ?></div></div>
+      <?php $todayCount = 0; foreach($rows as $r){ if (str_starts_with((string)$r['created_at'], date('Y-m-d'))) $todayCount++; } ?>
+      <div class="admin-card"><label>Today</label><div style="font-size:30px;font-weight:900;color:#93c5fd"><?= $todayCount ?></div></div>
       <div class="admin-card"><label>Latest</label><div style="font-size:15px;font-weight:700;color:#cbd5e1"><?= $rows ? h((string)$rows[0]['created_at']) : '—' ?></div></div>
     </div>
 

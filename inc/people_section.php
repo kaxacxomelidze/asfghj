@@ -8,7 +8,7 @@ declare(strict_types=1);
  *  - facebook, twitter, linkedin, instagram (optional URLs)
  */
 
-function render_people_section(string $heading, array $people): void
+function render_people_section($heading, $people)
 {
     if (empty($people)) return;
     ?>

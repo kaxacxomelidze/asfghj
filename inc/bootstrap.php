@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 // IMPORTANT: no spaces/BOM before <?php
 
-
 if (!function_exists('str_contains')) {
   function str_contains(string $haystack, string $needle): bool {
     if ($needle === '') return true;
@@ -73,6 +72,100 @@ function normalize_image_path(string $path): string {
   return url('assets/news/' . ltrim($path, '/'));
 }
 
+/**
+ * Save uploaded image and return relative path like: assets/news/abc123.jpg
+ * Returns '' if no file uploaded.
+ * Throws RuntimeException on upload/validation errors.
+ */
+function handle_image_upload(string $field = 'image', string $subDir = 'assets/news'): string {
+  if (!isset($_FILES[$field])) {
+    return '';
+  }
+
+  $f = $_FILES[$field];
+
+  // No file selected
+  if (!is_array($f) || (int)($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+    return '';
+  }
+
+  $err = (int)($f['error'] ?? UPLOAD_ERR_OK);
+  if ($err !== UPLOAD_ERR_OK) {
+    $map = [
+      UPLOAD_ERR_INI_SIZE   => 'Uploaded image exceeds upload_max_filesize',
+      UPLOAD_ERR_FORM_SIZE  => 'Uploaded image exceeds MAX_FILE_SIZE',
+      UPLOAD_ERR_PARTIAL    => 'Image upload was interrupted (partial upload)',
+      UPLOAD_ERR_NO_TMP_DIR => 'Temporary upload folder is missing',
+      UPLOAD_ERR_CANT_WRITE => 'Server failed to write uploaded image',
+      UPLOAD_ERR_EXTENSION  => 'Upload blocked by PHP extension',
+    ];
+    $msg = $map[$err] ?? ('Image upload failed (error code: ' . $err . ')');
+    throw new RuntimeException($msg);
+  }
+
+  $tmp = (string)($f['tmp_name'] ?? '');
+  if ($tmp === '' || !is_uploaded_file($tmp)) {
+    throw new RuntimeException('Invalid uploaded file');
+  }
+
+  // Validate real image
+  $imgInfo = @getimagesize($tmp);
+  if ($imgInfo === false) {
+    throw new RuntimeException('Uploaded file is not a valid image');
+  }
+
+  $mime = (string)($imgInfo['mime'] ?? '');
+  $extMap = [
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/gif'  => 'gif',
+    'image/webp' => 'webp',
+  ];
+
+  if (!isset($extMap[$mime])) {
+    throw new RuntimeException('Unsupported image type. Allowed: JPG, PNG, GIF, WEBP');
+  }
+
+  // Max 10 MB
+  $size = (int)($f['size'] ?? 0);
+  if ($size <= 0 || $size > 10 * 1024 * 1024) {
+    throw new RuntimeException('Image size must be between 1 byte and 10 MB');
+  }
+
+  $ext = $extMap[$mime];
+  $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+
+  $relativeDir = trim(str_replace('\\', '/', $subDir), '/'); // assets/news
+  $absoluteDir = dirname(__DIR__) . '/' . $relativeDir;      // projectRoot/assets/news
+
+  if (!is_dir($absoluteDir) && !@mkdir($absoluteDir, 0777, true)) {
+    throw new RuntimeException('Failed to create upload directory: ' . $absoluteDir);
+  }
+
+  if (!is_writable($absoluteDir)) {
+    throw new RuntimeException('Upload directory is not writable: ' . $absoluteDir);
+  }
+
+  $absolutePath = $absoluteDir . '/' . $filename;
+
+  if (!move_uploaded_file($tmp, $absolutePath)) {
+    throw new RuntimeException('Failed to move uploaded image');
+  }
+
+  // Store RELATIVE path in DB (recommended)
+  return $relativeDir . '/' . $filename;
+}
+
+/**
+ * Resolve image path from uploaded file or manual text path.
+ * Priority: upload > manual path
+ */
+function resolve_image_input(string $uploadField = 'image', string $manualField = 'image_path', string $subDir = 'assets/news'): string {
+  $manual = trim((string)($_POST[$manualField] ?? ''));
+  $uploaded = handle_image_upload($uploadField, $subDir);
+  return $uploaded !== '' ? $uploaded : $manual;
+}
+
 /** CSRF */
 function csrf_token(): string {
   if (empty($_SESSION['_csrf'])) {
@@ -80,7 +173,7 @@ function csrf_token(): string {
   }
   return $_SESSION['_csrf'];
 }
-function csrf_verify(): void {
+function csrf_verify() {
   $ok = isset($_POST['_csrf'], $_SESSION['_csrf']) && hash_equals($_SESSION['_csrf'], (string)$_POST['_csrf']);
   if (!$ok) {
     http_response_code(419);
@@ -96,15 +189,81 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
   }
   session_name($config['app']['session_name'] ?? 'SPGSESSID');
   $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-  session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => $secureCookie,
-    'httponly' => true,
-    'samesite' => 'Lax',
-  ]);
+  if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params([
+      'lifetime' => 0,
+      'path' => '/',
+      'domain' => '',
+      'secure' => $secureCookie,
+      'httponly' => true,
+      'samesite' => 'Lax',
+    ]);
+  } else {
+    // PHP < 7.3 has no array options support for SameSite.
+    session_set_cookie_params(0, '/; samesite=Lax', '', $secureCookie, true);
+  }
   session_start();
+}
+
+function fallback_sqlite_pdo(): PDO {
+  static $sqlite = null;
+  if ($sqlite instanceof PDO) return $sqlite;
+
+  $candidates = [
+    __DIR__ . '/../var/spg_fallback.sqlite',
+    sys_get_temp_dir() . '/spg_fallback.sqlite',
+  ];
+
+  $lastEx = null;
+  foreach ($candidates as $dbFile) {
+    try {
+      $dir = dirname($dbFile);
+      if (!is_dir($dir)) {
+        @mkdir($dir, 0777, true);
+      }
+      $sqlite = new PDO('sqlite:' . $dbFile, null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+      ]);
+      break;
+    } catch (Throwable $e) {
+      $lastEx = $e;
+      $sqlite = null;
+    }
+  }
+
+  if (!$sqlite instanceof PDO) {
+    // last-resort runtime fallback to keep site alive even on read-only hosting
+    $sqlite = new PDO('sqlite::memory:', null, null, [
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+  }
+
+  $schema = [
+    "CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at TEXT)",
+    "CREATE TABLE IF NOT EXISTS admin_permissions (admin_id INTEGER NOT NULL, permission TEXT NOT NULL, PRIMARY KEY (admin_id, permission))",
+    "CREATE TABLE IF NOT EXISTS news_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, title TEXT NOT NULL, excerpt TEXT NOT NULL, content TEXT, image_path TEXT NOT NULL, published_at TEXT NOT NULL, is_published INTEGER NOT NULL DEFAULT 1)",
+    "CREATE TABLE IF NOT EXISTS news_gallery (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL, image_path TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)",
+    "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, lecturer_name TEXT, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS contact_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT, message TEXT NOT NULL, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS membership_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, personal_id TEXT NOT NULL, phone TEXT NOT NULL, university TEXT NOT NULL, faculty TEXT NOT NULL, email TEXT, additional_info TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS people_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, page_key TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, role_title TEXT, image_path TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS user_courses (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course_title TEXT NOT NULL, instructor TEXT, schedule_text TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS user_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, task_title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'todo', created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS user_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, message TEXT NOT NULL, level TEXT NOT NULL DEFAULT 'info', is_read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS user_lecturers (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, lecturer_name TEXT NOT NULL, department TEXT, email TEXT, office_room TEXT, office_hours TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS admin_login_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, admin_id INTEGER, ip_address TEXT, user_agent TEXT, status TEXT NOT NULL, reason TEXT, created_at TEXT NOT NULL)",
+  ];
+  foreach ($schema as $sql) {
+    $sqlite->exec($sql);
+  }
+
+  $adminHash = '$2y$12$AwUYItlTmRoVCl7jWc/u1exQOUM0VoCO6K8jgHP3AlR3OkcM5YKnO';
+  $stmt = $sqlite->prepare('INSERT OR IGNORE INTO admins (id, username, password_hash, created_at) VALUES (1, ?, ?, ?)');
+  $stmt->execute(['admin', $adminHash, date('Y-m-d H:i:s')]);
+
+  return $sqlite;
 }
 
 /** DB */
@@ -126,17 +285,21 @@ function db(): PDO {
   } catch (PDOException $e) {
     $msg = (string)$e->getMessage();
     $isUnknownDb = str_contains($msg, '1049') || stripos($msg, 'Unknown database') !== false;
-    if (!$isUnknownDb) {
-      throw $e;
+    if ($isUnknownDb) {
+      try {
+        $serverDsn = "mysql:host={$db['host']};charset={$db['charset']}";
+        $serverPdo = new PDO($serverDsn, $db['user'], $db['pass'], $options);
+        $dbName = str_replace('`', '', (string)$db['name']);
+        $charset = (string)$db['charset'];
+        $serverPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET {$charset}");
+        $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+        return $pdo;
+      } catch (Throwable $e2) {
+        // fallback to sqlite below
+      }
     }
 
-    $serverDsn = "mysql:host={$db['host']};charset={$db['charset']}";
-    $serverPdo = new PDO($serverDsn, $db['user'], $db['pass'], $options);
-    $dbName = str_replace('`', '', (string)$db['name']);
-    $charset = (string)$db['charset'];
-    $serverPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET {$charset}");
-
-    $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+    $pdo = fallback_sqlite_pdo();
     return $pdo;
   }
 }
@@ -145,14 +308,14 @@ function db(): PDO {
 function is_admin(): bool {
   return !empty($_SESSION['admin_id']);
 }
-function require_admin(): void {
+function require_admin() {
   if (!is_admin()) {
     header('Location: ' . url('admin/login.php'));
     exit;
   }
 }
 
-function ensure_admin_permissions_table(): void {
+function ensure_admin_permissions_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -167,7 +330,29 @@ function ensure_admin_permissions_table(): void {
   }
 }
 
-function ensure_news_gallery_table(): void {
+function ensure_news_posts_table() {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS news_posts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      category VARCHAR(120) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      excerpt TEXT NOT NULL,
+      content LONGTEXT DEFAULT NULL,
+      image_path VARCHAR(255) NOT NULL,
+      published_at DATETIME NOT NULL,
+      is_published TINYINT(1) NOT NULL DEFAULT 1,
+      INDEX idx_news_posts_published_at (published_at),
+      INDEX idx_news_posts_is_published (is_published)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function ensure_news_gallery_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -231,16 +416,14 @@ function has_permission(string $perm): bool {
   return in_array($perm, $perms, true);
 }
 
-function require_permission(string $perm): void {
+function require_permission(string $perm) {
   if (!has_permission($perm)) {
     http_response_code(403);
     exit('Access denied');
   }
 }
 
-
-
-function ensure_admin_login_logs_table(): void {
+function ensure_admin_login_logs_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -262,7 +445,7 @@ function ensure_admin_login_logs_table(): void {
   }
 }
 
-function record_admin_login_log(string $username, ?int $adminId, string $status, string $reason = ''): void {
+function record_admin_login_log(string $username, $adminId, string $status, string $reason = '') {
   ensure_admin_login_logs_table();
   $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
   $ua = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
@@ -282,7 +465,7 @@ function record_admin_login_log(string $username, ?int $adminId, string $status,
   }
 }
 
-function ensure_users_table(): void {
+function ensure_users_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -325,7 +508,7 @@ function user_login_lock_remaining(): int {
   return max(0, $lockUntil - time());
 }
 
-function user_login_register_failure(): void {
+function user_login_register_failure() {
   $fails = (int)($_SESSION['user_login_failures'] ?? 0) + 1;
   $_SESSION['user_login_failures'] = $fails;
   if ($fails >= 5) {
@@ -334,7 +517,7 @@ function user_login_register_failure(): void {
   }
 }
 
-function user_login_register_success(): void {
+function user_login_register_success() {
   unset($_SESSION['user_login_failures'], $_SESSION['user_login_lock_until']);
 }
 
@@ -346,7 +529,7 @@ function strong_password(string $password): bool {
   return true;
 }
 
-function current_user(): ?array {
+function current_user() {
   if (!is_user_logged_in()) return null;
   return [
     'id' => (int)($_SESSION['user_id'] ?? 0),
@@ -356,7 +539,7 @@ function current_user(): ?array {
   ];
 }
 
-function ensure_user_courses_table(): void {
+function ensure_user_courses_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -376,7 +559,7 @@ function ensure_user_courses_table(): void {
   }
 }
 
-function ensure_user_tasks_table(): void {
+function ensure_user_tasks_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -396,7 +579,7 @@ function ensure_user_tasks_table(): void {
   }
 }
 
-function ensure_user_notifications_table(): void {
+function ensure_user_notifications_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -416,8 +599,7 @@ function ensure_user_notifications_table(): void {
   }
 }
 
-
-function ensure_user_lecturers_table(): void {
+function ensure_user_lecturers_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -438,7 +620,7 @@ function ensure_user_lecturers_table(): void {
   }
 }
 
-function seed_user_dashboard_data(int $userId): void {
+function seed_user_dashboard_data($userId) {
   ensure_user_courses_table();
   ensure_user_tasks_table();
   ensure_user_notifications_table();
@@ -503,7 +685,6 @@ function get_user_notifications(int $userId): array {
   }
 }
 
-
 function get_user_lecturers(int $userId): array {
   ensure_user_lecturers_table();
   try {
@@ -515,8 +696,6 @@ function get_user_lecturers(int $userId): array {
   }
 }
 
-
-
 function normalize_lecturer_name(string $name): string {
   $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
   return mb_substr($name, 0, 190);
@@ -526,7 +705,12 @@ function list_available_lecturers(): array {
   ensure_user_lecturers_table();
   try {
     $rows = db()->query("SELECT DISTINCT lecturer_name FROM user_lecturers WHERE lecturer_name<>'' ORDER BY lecturer_name ASC")->fetchAll();
-    return array_values(array_filter(array_map(fn($r) => trim((string)($r['lecturer_name'] ?? '')), $rows)));
+    $out = [];
+    foreach ($rows as $r) {
+      $name = trim((string)($r['lecturer_name'] ?? ''));
+      if ($name !== '') $out[] = $name;
+    }
+    return array_values($out);
   } catch (Throwable $e) {
     return [];
   }
@@ -581,7 +765,7 @@ function get_news_posts(int $limit = 50): array {
   return $out;
 }
 
-function get_one_news(int $id): ?array {
+function get_one_news(int $id) {
   try {
     $stmt = db()->prepare("SELECT * FROM news_posts WHERE id=? AND is_published=1 LIMIT 1");
     $stmt->execute([$id]);
@@ -623,7 +807,7 @@ function get_news_gallery(int $postId): array {
   return $out;
 }
 
-function ensure_contact_messages_table(): void {
+function ensure_contact_messages_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -642,7 +826,7 @@ function ensure_contact_messages_table(): void {
   }
 }
 
-function ensure_membership_applications_table(): void {
+function ensure_membership_applications_table() {
   static $done = false;
   if ($done) return;
   $done = true;
@@ -665,7 +849,7 @@ function ensure_membership_applications_table(): void {
   }
 }
 
-function ensure_people_profiles_table(): void {
+function ensure_people_profiles_table() {
   static $done = false;
   if ($done) return;
   $done = true;
