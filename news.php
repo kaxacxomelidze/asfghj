@@ -20,7 +20,7 @@ $rest = array_slice($posts, 1);
         <h1 style="font-size:clamp(28px,4vw,40px);line-height:1.15;margin:0">საქართველოს სტუდენტური პარლამენტი და მთავრობა — სიახლეები</h1>
         <p style="margin-top:8px;color:var(--muted)">ორგანიზაციის ყველა განცხადება, ღონისძიება და განახლება ერთ სივრცეში.</p>
       </div>
-      <a href="<?=h(url('index.php#home'))?>" class="btn" style="padding:10px 14px">← მთავარ გვერდზე დაბრუნება</a>
+      <a href="<?=h(url('#home'))?>" class="btn" style="padding:10px 14px">← მთავარ გვერდზე დაბრუნება</a>
     </div>
 
     <?php if ($loadError): ?>

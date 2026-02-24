@@ -190,10 +190,10 @@
       <!-- Navigation -->
       <div class="footerCol">
         <h4>ნავიგაცია</h4>
-        <a class="footerLink" href="<?=h(url('index#home'))?>">მთავარი</a>
-        <a class="footerLink" href="<?=h(url('index#news'))?>">სიახლეები</a>
-        <a class="footerLink" href="<?=h(url('index#about-history'))?>">ჩვენს შესახებ</a>
-        <a class="footerLink" href="<?=h(url('index#contact'))?>">კონტაქტი</a>
+        <a class="footerLink" href="<?=h(url('#home'))?>">მთავარი</a>
+        <a class="footerLink" href="<?=h(url('#news'))?>">სიახლეები</a>
+        <a class="footerLink" href="<?=h(url('#about-history'))?>">ჩვენს შესახებ</a>
+        <a class="footerLink" href="<?=h(url('#contact'))?>">კონტაქტი</a>
       </div>
 
       <!-- Team -->

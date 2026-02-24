@@ -7,6 +7,10 @@ RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
 
+# Redirect /index and /index.php to root
+RewriteCond %{THE_REQUEST} \s/+index(?:\.php)?(?:[\s?]|$) [NC]
+RewriteRule ^index(?:\.php)?$ / [R=301,L]
+
 # Keep admin panel URLs unchanged
 RewriteRule ^admin/ - [L]
 

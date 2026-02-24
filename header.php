@@ -317,7 +317,7 @@
           <a class="btn signin" href="<?=h(url('user-auth.php#dashboard'))?>" data-i18n="header.signin">🔐 Sign in</a>
         </div>
 
-        <a class="brand" href="<?=h(url('index#home'))?>" aria-label="Home">
+        <a class="brand" href="<?=h(url('#home'))?>" aria-label="Home">
           <img class="logoImg" src="cropped-cropped-IMG_9728.png" alt="SPG Logo" />
         </a>
 
@@ -331,7 +331,7 @@
     <div class="navbar">
       <div class="container navbar__inner">
         <nav class="nav" aria-label="Main">
-          <a class="active" href="<?=h(url('index#home'))?>" data-i18n="nav.home">მთავარი</a>
+          <a class="active" href="<?=h(url('#home'))?>" data-i18n="nav.home">მთავარი</a>
           <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
 
           <div class="drop" data-drop="about">
@@ -343,7 +343,7 @@
               <a href="<?=h(url('mission.php'))?>" data-i18n="nav.aboutMission">მისია</a>
               <a href="<?=h(url('vision.php'))?>" data-i18n="nav.aboutVision">ხედვა</a>
               <a href="<?=h(url('structure.php'))?>" data-i18n="nav.aboutStructure">სტრუქტურა</a>
-              <a href="<?=h(url('index#about-career'))?>" data-i18n="nav.aboutCareer">კარიერული განვითარების გეგმა</a>
+              <a href="<?=h(url('#about-career'))?>" data-i18n="nav.aboutCareer">კარიერული განვითარების გეგმა</a>
               <a href="<?=h(url('message.php'))?>" data-i18n="nav.aboutMessage">ხელმძღვანელის მიმართვა</a>
             </div>
           </div>
@@ -365,7 +365,7 @@
       </div>
 
       <div class="container mobile" id="mobile">
-        <a href="<?=h(url('index#home'))?>" data-i18n="nav.home">მთავარი</a>
+        <a href="<?=h(url('#home'))?>" data-i18n="nav.home">მთავარი</a>
         <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
         <a href="<?=h(url('history.php'))?>" data-i18n="nav.about">ჩვენს შესახებ</a>
         <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.team">გუნდი</a>
