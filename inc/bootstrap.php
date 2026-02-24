@@ -46,6 +46,28 @@ if (BASE_URL === '') {
   define('AUTO_BASE_URL', BASE_URL);
 }
 
+
+function request_is_https(): bool {
+  if (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') return true;
+  if ((string)($_SERVER['SERVER_PORT'] ?? '') === '443') return true;
+  if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && str_contains(strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']), 'https')) return true;
+  if (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') return true;
+  return false;
+}
+
+function should_force_https(): bool {
+  return (bool)($GLOBALS['config']['app']['force_https'] ?? false);
+}
+
+if (should_force_https() && !request_is_https() && PHP_SAPI !== 'cli') {
+  $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+  if (!preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/i', $host)) {
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+    header('Location: https://' . $host . $uri, true, 301);
+    exit;
+  }
+}
+
 /** Build absolute URL within this project */
 function url(string $path = ''): string {
   $base = AUTO_BASE_URL;
@@ -66,7 +88,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 
 /** Current absolute URL for canonical tags */
 function current_url(): string {
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+  $scheme = request_is_https() ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
   $uri = $_SERVER['REQUEST_URI'] ?? url('/');
   return $scheme . '://' . $host . $uri;
@@ -203,7 +225,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     exit("Headers already sent in: {$file} on line {$line}. Make sure every page loads bootstrap.php BEFORE header.php.");
   }
   session_name($config['app']['session_name'] ?? 'SPGSESSID');
-  $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+  $secureCookie = request_is_https();
   if (PHP_VERSION_ID >= 70300) {
     session_set_cookie_params([
       'lifetime' => 0,
@@ -269,6 +291,7 @@ function fallback_sqlite_pdo(): PDO {
     "CREATE TABLE IF NOT EXISTS user_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, message TEXT NOT NULL, level TEXT NOT NULL DEFAULT 'info', is_read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_lecturers (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, lecturer_name TEXT NOT NULL, department TEXT, email TEXT, office_room TEXT, office_hours TEXT, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS admin_login_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, admin_id INTEGER, ip_address TEXT, user_agent TEXT, status TEXT NOT NULL, reason TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS partner_logos (id INTEGER PRIMARY KEY AUTOINCREMENT, image_path TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL)",
   ];
   foreach ($schema as $sql) {
     $sqlite->exec($sql);
@@ -390,6 +413,7 @@ function available_admin_permissions(): array {
     'news.create' => 'Create news',
     'news.edit' => 'Edit news',
     'news.delete' => 'Delete news',
+    'partners.manage' => 'Manage partners section logos',
     'people.manage' => 'Manage team members',
     'contact.view' => 'View contact submissions',
     'membership.view' => 'View membership applications',
@@ -817,6 +841,47 @@ function get_news_gallery(int $postId): array {
     $out[] = [
       'id' => (int)$row['id'],
       'path' => normalize_image_path((string)$row['image_path']),
+    ];
+  }
+  return $out;
+}
+
+
+function ensure_partner_logos_table() {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS partner_logos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      image_path VARCHAR(255) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      INDEX (sort_order),
+      INDEX (is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function get_partner_logos(int $limit = 30): array {
+  ensure_partner_logos_table();
+  try {
+    $stmt = db()->prepare("SELECT id, image_path FROM partner_logos WHERE is_active=1 ORDER BY sort_order ASC, id DESC LIMIT :lim");
+    $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+
+  $out = [];
+  foreach ($rows as $row) {
+    $out[] = [
+      'id' => (int)$row['id'],
+      'img' => normalize_image_path((string)$row['image_path']),
     ];
   }
   return $out;

@@ -280,9 +280,13 @@
     @media (max-width: 560px){
       /* on very small phones */
       .brandbar{padding:14px 0}
-      .logoImg{height:64px}
-      .leftActions .btn.signin{padding:11px 12px}
-      .actions .btn.primary{padding:11px 12px}
+      .logoImg{height:58px}
+      .leftActions .btn.signin{padding:10px 11px;font-size:13px}
+      .actions .btn.primary{padding:10px 11px;font-size:13px}
+      .topbar__left .pill:nth-child(3){display:none}
+      .topbar__inner{gap:8px}
+      .lang button{padding:6px 8px;font-size:12px}
+      .mobile a{font-size:14px}
     }
   </style>
 </head>

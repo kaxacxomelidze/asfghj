@@ -7,6 +7,7 @@ include __DIR__ . "/header.php";
 // ✅ Get posts from DB in SAME shape as your demo array:
 // ["id","cat","date","title","text","img"]
 $posts = get_news_posts(60);
+$partners = get_partner_logos(40);
 
 // Escape
 function h_local($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -346,6 +347,22 @@ $latestMini     = slice_safe($posts, 1, 5);
     .magItem{ grid-template-columns: 1fr; }
     .grid{ grid-template-columns: 1fr; }
   }
+
+.partnersSection{margin-top:18px}
+.partnersWrap{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;overflow:hidden;box-shadow:0 14px 30px rgba(15,23,42,.06)}
+.partnersTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+.partnersTitle h2{margin:0;font-size:20px}
+.partnersTicker{position:relative;overflow:hidden;mask-image:linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)}
+.partnersTrack{display:flex;align-items:center;gap:12px;width:max-content;animation:partners-scroll 35s linear infinite}
+.partnersTicker:hover .partnersTrack{animation-play-state:paused}
+.partnerLogo{min-width:124px;width:124px;height:62px;display:flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;border-radius:12px;background:#fff;padding:8px}
+.partnerLogo img{max-width:100%;max-height:100%;object-fit:contain;filter:grayscale(15%)}
+@keyframes partners-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (max-width: 980px){
+  .partnersWrap{padding:14px}
+  .partnerLogo{min-width:104px;width:104px;height:54px}
+}
+
 </style>
 
 <main>
@@ -573,6 +590,26 @@ $latestMini     = slice_safe($posts, 1, 5);
     </div>
   </div>
 
+  <?php if(!empty($partners)): ?>
+  <section class="partnersSection" aria-label="პარტნიორები">
+    <div class="partnersWrap">
+      <div class="partnersTitle">
+        <h2>პარტნიორები</h2>
+        <span class="sub">ჩვენი მხარდამჭერი ორგანიზაციები</span>
+      </div>
+      <div class="partnersTicker" id="partnersTicker">
+        <div class="partnersTrack" id="partnersTrack">
+          <?php foreach(array_merge($partners, $partners) as $logo): ?>
+            <div class="partnerLogo">
+              <img src="<?=h((string)$logo['img'])?>" alt="პარტნიორი ლოგო" loading="lazy">
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <?php endif; // empty posts ?>
 </main>
 
@@ -713,6 +750,15 @@ $latestMini     = slice_safe($posts, 1, 5);
   wrap.addEventListener('mouseleave', start);
   start();
 })();
+
+
+(function(){
+  const t = document.getElementById('partnersTrack');
+  if(!t) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ t.style.animation = 'none'; }
+})();
+
 </script>
 
 <?php include __DIR__ . "/footer.php"; ?>

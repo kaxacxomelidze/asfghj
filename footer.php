@@ -146,6 +146,13 @@
     }
   }
 
+  @media (max-width: 768px){
+    .footerGrid{
+      grid-template-columns: 1fr;
+      gap:20px;
+    }
+  }
+
   @media (max-width: 560px){
     .footerWrap{padding:40px 0 26px}
     .footerGrid{
