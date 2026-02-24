@@ -190,7 +190,7 @@
       background: #f1f5f9;
       border-color: #eef2f7;
     }
-    .nav > a.active {
+    .nav > a.active, .drop > button.active {
       color: var(--text);
       background: rgba(37, 99, 235, .10);
       border-color: rgba(37, 99, 235, .20);
@@ -331,10 +331,10 @@
     <div class="navbar">
       <div class="container navbar__inner">
         <nav class="nav" aria-label="Main">
-          <a class="active" href="<?=h(url('#home'))?>" data-i18n="nav.home">მთავარი</a>
-          <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
+          <a id="nav-home" href="<?=h(url('#home'))?>" data-i18n="nav.home">მთავარი</a>
+          <a id="nav-news" href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
 
-          <div class="drop" data-drop="about">
+          <div class="drop" data-drop="about" id="nav-about">
             <button type="button" aria-haspopup="true" aria-expanded="false">
               <span data-i18n="nav.about">ჩვენს შესახებ</span> <span class="caret">▾</span>
             </button>
@@ -348,7 +348,7 @@
             </div>
           </div>
 
-          <div class="drop" data-drop="team">
+          <div class="drop" data-drop="team" id="nav-team">
             <button type="button" aria-haspopup="true" aria-expanded="false">
               <span data-i18n="nav.team">გუნდი</span> <span class="caret">▾</span>
             </button>
@@ -360,7 +360,7 @@
             </div>
           </div>
 
-          <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
+          <a id="nav-contact" href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         </nav>
       </div>
 
@@ -407,4 +407,63 @@
         langBtns.forEach(b=>b.classList.toggle("active", b===btn));
       });
     });
+
+    // dynamic active nav pill
+    const navHome = $("#nav-home");
+    const navNews = $("#nav-news");
+    const navContact = $("#nav-contact");
+    const navAboutBtn = $("#nav-about > button");
+    const navTeamBtn = $("#nav-team > button");
+
+    function clearActive(){
+      [navHome, navNews, navContact, navAboutBtn, navTeamBtn].forEach(el => el?.classList.remove("active"));
+    }
+
+    function normPath(path){
+      if(!path) return '/';
+      let p = path.toLowerCase().replace(/\/+$|\/$/g, '');
+      if(p === '') p = '/';
+      p = p.replace(/\.php$/,'');
+      if(p === '/index') p = '/';
+      return p;
+    }
+
+    function setActiveNavByLocation(){
+      clearActive();
+      const path = normPath(location.pathname);
+      const hash = (location.hash || '').toLowerCase();
+
+      const aboutPaths = ['/history','/mission','/vision','/structure','/message'];
+      const teamPaths = ['/pr-event','/aparati','/parlament','/gov'];
+
+      if (hash === '#about-career' || aboutPaths.includes(path)) {
+        navAboutBtn?.classList.add('active');
+        return;
+      }
+      if (teamPaths.includes(path)) {
+        navTeamBtn?.classList.add('active');
+        return;
+      }
+      if (path === '/news') {
+        navNews?.classList.add('active');
+        return;
+      }
+      if (path === '/contact') {
+        navContact?.classList.add('active');
+        return;
+      }
+      navHome?.classList.add('active');
+    }
+
+    setActiveNavByLocation();
+    window.addEventListener('hashchange', setActiveNavByLocation);
+
+    [navHome, navNews, navContact].forEach(el => {
+      el?.addEventListener('click', () => {
+        clearActive();
+        el.classList.add('active');
+      });
+    });
+    navAboutBtn?.addEventListener('click', () => { clearActive(); navAboutBtn.classList.add('active'); });
+    navTeamBtn?.addEventListener('click', () => { clearActive(); navTeamBtn.classList.add('active'); });
   </script>
