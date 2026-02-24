@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'SPG Portal — Lecturer';
+$pageTitle = 'საქართველოს სტუდენტური პარლამენტი და მთავრობა — Lecturer';
 require __DIR__ . '/inc/bootstrap.php';
 
 $lecturerOptions = list_available_lecturers();
