@@ -302,6 +302,8 @@ $latestMini     = slice_safe($posts, 1, 5);
 
   /* SIDEBAR */
   .sidebar{ position: sticky; top:110px; }
+  .sidebarStack{ display:grid; gap:16px; }
+  .sidebarBlock{ padding-bottom:2px; }
   .sideTitle{ margin:0 0 10px; font-size:15px; font-weight:900; }
   .cat a{
     display:flex; justify-content:space-between; align-items:center;
@@ -528,7 +530,8 @@ $latestMini     = slice_safe($posts, 1, 5);
 
       <!-- SIDEBAR -->
       <aside class="panel sidebar">
-        <div class="pad">
+        <div class="pad sidebarStack">
+          <div class="sidebarBlock">
           <h3 class="sideTitle">კატეგორიები</h3>
           <div class="cat">
             <?php
@@ -547,8 +550,9 @@ $latestMini     = slice_safe($posts, 1, 5);
               </a>
             <?php endforeach; ?>
           </div>
+          </div>
 
-          <div style="margin-top:14px">
+          <div class="sidebarBlock">
             <h3 class="sideTitle">ბოლო ჩანაწერები</h3>
             <?php foreach($latestMini as $p): ?>
               <a class="mini" href="<?=h(url('news-single?id=' . (int)$p["id"]))?>">
@@ -561,12 +565,11 @@ $latestMini     = slice_safe($posts, 1, 5);
             <?php endforeach; ?>
           </div>
 
-
           <?php if(!empty($compactList)): ?>
-          <div style="margin-top:14px">
+          <div class="sidebarBlock">
             <div class="row">
               <div>
-                <h3 class="sideTitle" style="margin:0">მოკლე სია</h3>
+                <h3 class="sideTitle">მოკლე სია</h3>
                 <div class="sub">კომპაქტური ფორმატი — სწრაფი გადახედვა</div>
               </div>
             </div>

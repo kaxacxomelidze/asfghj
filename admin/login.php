@@ -141,16 +141,14 @@ if ($requestMethod === 'POST') {
 <?php admin_head('Admin Login'); ?>
 <body class="admin-body admin-login-page">
   <main class="admin-login-shell" role="main">
-    <section class="admin-login-brand" aria-hidden="true">
-      <span class="admin-login-badge">SPG Admin</span>
-      <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo" width="88" height="88">
-      <h1>Admin Panel</h1>
-      <p>Secure access for content and management tools.</p>
-    </section>
-
     <form class="admin-card admin-login-card" method="post" novalidate>
-      <h2>Admin Login</h2>
-      <p class="admin-login-subtitle">Sign in to manage news, teams, and settings.</p>
+      <div class="admin-login-head">
+        <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo" width="52" height="52">
+        <div>
+          <h2>Admin Login</h2>
+          <p class="admin-login-subtitle">Secure access to administration panel.</p>
+        </div>
+      </div>
 
       <?php if ($error !== ''): ?>
         <div class="err"><?= h($error) ?></div>
