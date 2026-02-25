@@ -7,6 +7,8 @@ function admin_head($title) {
     <meta charset="utf-8">
     <title><?=h($title)?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="<?=h(url('spg_logo2.png'))?>">
+    <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="<?=h(url('admin/assets_admin.css'))?>">
   </head>
   <?php
