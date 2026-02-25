@@ -47,7 +47,11 @@ function init_login_session_state(): void
 
 init_login_session_state();
 
-if (empty($_SESSION['captcha_a']) || empty($_SESSION['captcha_b'])) {
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if ($requestMethod !== 'POST') {
+    // Always refresh captcha on page reload/open
+    set_captcha();
+} elseif (empty($_SESSION['captcha_a']) || empty($_SESSION['captcha_b'])) {
     set_captcha();
 }
 
@@ -61,7 +65,7 @@ $error = '';
 $lockoutSeconds = 300; // 5 minutes
 $maxAttempts = 5;
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+if ($requestMethod === 'POST') {
     try {
         csrf_verify();
 
@@ -136,8 +140,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <html lang="en">
 <?php admin_head('Admin Login'); ?>
 <body class="admin-body admin-login-page">
-  <main class="admin-login-shell">
+  <main class="admin-login-shell" role="main">
     <section class="admin-login-brand" aria-hidden="true">
+      <span class="admin-login-badge">SPG Admin</span>
       <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo" width="88" height="88">
       <h1>Admin Panel</h1>
       <p>Secure access for content and management tools.</p>
@@ -166,7 +171,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
       <div class="admin-field">
         <label for="captcha">
-          Captcha: <?= h((string)($_SESSION['captcha_a'] ?? 0)) ?> + <?= h((string)($_SESSION['captcha_b'] ?? 0)) ?>
+          Captcha: <strong><?= h((string)($_SESSION['captcha_a'] ?? 0)) ?> + <?= h((string)($_SESSION['captcha_b'] ?? 0)) ?></strong>
         </label>
         <input id="captcha" name="captcha" inputmode="numeric" autocomplete="off" required>
       </div>
