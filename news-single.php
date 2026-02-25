@@ -1,5 +1,5 @@
 <?php
-$pageTitle = "SPG Portal — სიახლე";
+$pageTitle = "საქართველოს სტუდენტური პარლამენტი და მთავრობა — სიახლე";
 require __DIR__ . "/inc/bootstrap.php";
 include __DIR__ . "/header.php";
 
