@@ -29,6 +29,14 @@ function admin_topbar($title, $links = []) {
         <h2 class="admin-title"><?=h($title)?></h2>
       </div>
     </div>
+
+    <?php if (!empty($links)): ?>
+      <div class="admin-links" aria-label="Admin pages">
+        <?php foreach ($links as $item): ?>
+          <a class="admin-link" href="<?=h((string)$item['href'])?>"><?=h((string)$item['label'])?></a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </div>
 
   <?php if (!empty($links)): ?>
