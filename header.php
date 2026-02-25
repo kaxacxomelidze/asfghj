@@ -4,6 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" type="image/png" href="<?= h(url('spg_logo2.png')) ?>" />
+  <link rel="apple-touch-icon" href="<?= h(url('spg_logo2.png')) ?>" />
+  <meta name="theme-color" content="#2563eb" />
   <?php
     $orgName = "საქართველოს სტუდენტური პარლამენტი და მთავრობა";
     $metaTitle = isset($pageTitle) ? htmlspecialchars((string)$pageTitle, ENT_QUOTES, "UTF-8") : $orgName;
@@ -19,6 +22,7 @@
   <meta property="og:title" content="<?= $metaTitle ?>" />
   <meta property="og:description" content="<?= $metaDescription ?>" />
   <meta property="og:url" content="<?= h($canonicalUrl) ?>" />
+  <link rel="preload" as="image" href="<?= h(url('spg_logo2.png')) ?>" />
   <link rel="sitemap" type="application/xml" title="Sitemap" href="<?= h(url('sitemap')) ?>" />
 
   <style>
