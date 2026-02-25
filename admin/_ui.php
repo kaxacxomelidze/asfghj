@@ -21,10 +21,11 @@ function admin_topbar($title, $links = []) {
   }
   $rendered = true;
   ?>
-  <div class="admin-top" role="navigation" aria-label="Admin quick menu">
-    <div class="admin-top__head">
-      <div class="admin-brand-mini">
-        <img src="<?=h(url('spg_logo2.png'))?>" alt="SPG" />
+  <div class="admin-top" role="banner">
+    <div class="admin-brand-mini">
+      <img src="<?=h(url('spg_logo2.png'))?>" alt="SPG" />
+      <div>
+        <div class="admin-kicker">Admin Panel</div>
         <h2 class="admin-title"><?=h($title)?></h2>
       </div>
     </div>
@@ -37,5 +38,16 @@ function admin_topbar($title, $links = []) {
       </div>
     <?php endif; ?>
   </div>
+
+  <?php if (!empty($links)): ?>
+    <aside class="admin-side-menu" role="navigation" aria-label="Admin right side menu">
+      <h3>მენიუ</h3>
+      <div class="admin-links">
+        <?php foreach ($links as $item): ?>
+          <a class="admin-link" href="<?=h((string)$item['href'])?>"><?=h((string)$item['label'])?></a>
+        <?php endforeach; ?>
+      </div>
+    </aside>
+  <?php endif; ?>
   <?php
 }
