@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt = db()->prepare('INSERT INTO partner_logos (image_path, sort_order, is_active, created_at) VALUES (?, ?, ?, ?)');
       $stmt->execute([$path, $sortOrder, $active, date('Y-m-d H:i:s')]);
       $msg = 'Partner logo added.';
+      safe_record_admin_activity('create', 'partner_logo', (int)db()->lastInsertId(), 'Added partner logo');
     }
 
     if ($action === 'delete') {
@@ -35,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt = db()->prepare('DELETE FROM partner_logos WHERE id=?');
       $stmt->execute([$id]);
       $msg = 'Partner logo removed.';
+      safe_record_admin_activity('delete', 'partner_logo', $id, 'Deleted partner logo');
     }
 
     if ($action === 'toggle') {
@@ -43,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt = db()->prepare('UPDATE partner_logos SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?');
       $stmt->execute([$id]);
       $msg = 'Partner logo status updated.';
+      safe_record_admin_activity('toggle', 'partner_logo', $id, 'Toggled partner logo active state');
     }
   } catch (Throwable $e) {
     $err = $e->getMessage() ?: 'Action failed.';

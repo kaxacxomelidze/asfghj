@@ -47,6 +47,22 @@ CREATE TABLE IF NOT EXISTS admin_login_logs (
   INDEX idx_admin_login_logs_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS admin_activity_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  username VARCHAR(120) NOT NULL,
+  action VARCHAR(64) NOT NULL,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id INT DEFAULT NULL,
+  details TEXT DEFAULT NULL,
+  ip_address VARCHAR(64) DEFAULT NULL,
+  user_agent VARCHAR(255) DEFAULT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_admin_activity_logs_created_at (created_at),
+  INDEX idx_admin_activity_logs_admin_id (admin_id),
+  INDEX idx_admin_activity_logs_entity_type (entity_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- -----------------------------
 -- News tables
 -- -----------------------------
