@@ -10,6 +10,7 @@ $people = get_people_by_page('gov');
   <div class="container" style="max-width:1000px;padding:40px 0">
     <h2 style="margin-bottom:12px">სტუდენტური მთავრობა</h2>
     <p style="line-height:1.9">გვერდზე აისახება სტუდენტური მთავრობის წევრები.</p>
+    <div style="margin-top:14px"><a class="btn" href="<?=h(url('gov-join'))?>">+ წევრის დამატება</a></div>
   </div>
 </section>
 <?php render_people_section('სტუდენტური მთავრობა', $people); ?>
