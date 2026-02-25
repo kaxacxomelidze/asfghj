@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
-$pageTitle = 'SPG Portal — გაწევრიანება';
+$pageTitle = 'საქართველოს სტუდენტური პარლამენტი და მთავრობა — გაწევრიანება';
 ensure_membership_applications_table();
 
 $errors = [];

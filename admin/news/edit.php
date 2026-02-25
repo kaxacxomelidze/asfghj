@@ -137,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
+    safe_record_admin_activity('update', 'news_post', $id, 'Updated news post: ' . $data['title']);
     header('Location: ' . url('admin/news/index.php'));
     exit;
   }
