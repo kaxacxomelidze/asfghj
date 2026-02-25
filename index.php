@@ -297,6 +297,8 @@ $latestMini     = slice_safe($posts, 1, 5);
   .cTitle{ margin:0; font-size:14.5px; font-weight:900; line-height:1.35; }
   .cText{ margin-top:6px; color:var(--muted); font-size:13.6px; line-height:1.6; max-width:680px; }
   .cDate{ color:#94a3b8; font-size:12.5px; white-space:nowrap; }
+  .sidebar .compact a{ gap:8px; }
+  .sidebar .compact .cText{ max-width:none; }
 
   /* SIDEBAR */
   .sidebar{ position: sticky; top:110px; }
@@ -522,33 +524,6 @@ $latestMini     = slice_safe($posts, 1, 5);
         </div>
         <?php endif; ?>
 
-        <!-- COMPACT -->
-        <?php if(!empty($compactList)): ?>
-        <div class="panel" style="margin-top:14px">
-          <div class="pad">
-            <div class="row">
-              <div>
-                <h2 class="h2">მოკლე სია</h2>
-                <div class="sub">კომპაქტური ფორმატი — სწრაფი გადახედვა</div>
-              </div>
-            </div>
-
-            <div class="compact">
-              <?php foreach($compactList as $p): ?>
-                <a href="<?=h(url('news-single?id=' . (int)$p["id"]))?>">
-                  <div>
-                    <span class="tagPill <?=h_local(tag_class($p["cat"]))?>"><?=h_local($p["cat"]) ?></span>
-                    <p class="cTitle" style="margin-top:8px"><?=h_local($p["title"]) ?></p>
-                    <div class="cText"><?=h_local($p["text"]) ?></div>
-                  </div>
-                  <div class="cDate"><?=h_local($p["date"]) ?></div>
-                </a>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        </div>
-        <?php endif; ?>
-
       </section>
 
       <!-- SIDEBAR -->
@@ -585,6 +560,31 @@ $latestMini     = slice_safe($posts, 1, 5);
               </a>
             <?php endforeach; ?>
           </div>
+
+
+          <?php if(!empty($compactList)): ?>
+          <div style="margin-top:14px">
+            <div class="row">
+              <div>
+                <h3 class="sideTitle" style="margin:0">მოკლე სია</h3>
+                <div class="sub">კომპაქტური ფორმატი — სწრაფი გადახედვა</div>
+              </div>
+            </div>
+
+            <div class="compact">
+              <?php foreach($compactList as $p): ?>
+                <a href="<?=h(url('news-single?id=' . (int)$p["id"]))?>">
+                  <div>
+                    <span class="tagPill <?=h_local(tag_class($p["cat"]))?>"><?=h_local($p["cat"]) ?></span>
+                    <p class="cTitle" style="margin-top:8px"><?=h_local($p["title"]) ?></p>
+                    <div class="cText"><?=h_local($p["text"]) ?></div>
+                  </div>
+                  <div class="cDate"><?=h_local($p["date"]) ?></div>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <?php endif; ?>
         </div>
       </aside>
 
