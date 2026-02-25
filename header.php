@@ -19,6 +19,7 @@
   <meta property="og:title" content="<?= $metaTitle ?>" />
   <meta property="og:description" content="<?= $metaDescription ?>" />
   <meta property="og:url" content="<?= h($canonicalUrl) ?>" />
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="<?= h(url('sitemap')) ?>" />
 
   <style>
     :root {
@@ -289,6 +290,24 @@
       .mobile a{font-size:14px}
     }
   </style>
+
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "საქართველოს სტუდენტური პარლამენტი და მთავრობა",
+    "url": "<?= h(rtrim((preg_replace('~/(index|sitemap)(\.php)?$~i', '', current_url()) ?: current_url()), '/')) ?>/",
+    "logo": "<?= h(url('spg_logo2.png')) ?>",
+    "contactPoint": [{
+      "@type": "ContactPoint",
+      "telephone": "+995591037047",
+      "contactType": "customer support",
+      "areaServed": "GE"
+    }]
+  }
+  </script>
+
 </head>
 
 <body>
