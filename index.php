@@ -379,19 +379,6 @@ $latestMini     = slice_safe($posts, 1, 5);
       </div>
     </div>
   <?php else: ?>
-
-  <section class="panel" style="margin-bottom:14px">
-    <div class="pad" style="display:grid;gap:10px">
-      <h1 class="h2" style="font-size:clamp(20px,2.1vw,30px)">საქართველოს სტუდენტური პარლამენტი და მთავრობა</h1>
-      <p class="sub" style="font-size:15px;line-height:1.8">
-        ეს არის ოფიციალური სივრცე <strong>სტუდენტური პარლამენტი</strong>-სთვის, სადაც
-        <strong>ახალგაზრდობა</strong> და <strong>ახალგაზრდები</strong> ერთიანდებიან
-        პროექტებში: <strong>ტრენინგი</strong>, <strong>ბანაკი</strong>, <strong>შეხვედრა</strong>
-        და საგანმანათლებლო <strong>გართობა</strong>.
-      </p>
-    </div>
-  </section>
-
   <!-- HERO -->
   <div class="heroFullBleed">
     <div class="heroSlider" id="heroSlider">
