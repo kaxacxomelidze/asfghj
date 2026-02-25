@@ -138,7 +138,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <body class="admin-body admin-login-page">
   <main class="admin-login-shell">
     <section class="admin-login-brand" aria-hidden="true">
-      <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo">
+      <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo" width="88" height="88">
       <h1>Admin Panel</h1>
       <p>Secure access for content and management tools.</p>
     </section>
