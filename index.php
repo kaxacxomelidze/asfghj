@@ -590,13 +590,14 @@ $latestMini     = slice_safe($posts, 1, 5);
     </div>
   </div>
 
-  <?php if(!empty($partners)): ?>
+
   <section class="partnersSection" aria-label="პარტნიორები">
     <div class="partnersWrap">
       <div class="partnersTitle">
         <h2>პარტნიორები</h2>
         <span class="sub">ჩვენი მხარდამჭერი ორგანიზაციები</span>
       </div>
+      <?php if(!empty($partners)): ?>
       <div class="partnersTicker" id="partnersTicker">
         <div class="partnersTrack" id="partnersTrack">
           <?php foreach(array_merge($partners, $partners) as $logo): ?>
@@ -606,9 +607,11 @@ $latestMini     = slice_safe($posts, 1, 5);
           <?php endforeach; ?>
         </div>
       </div>
+      <?php else: ?>
+      <div style="padding:10px 2px;color:var(--muted);font-size:14px">ლოგოები ჯერ დამატებული არ არის. დამატება შესაძლებელია ადმინ პანელიდან (Partners).</div>
+      <?php endif; ?>
     </div>
   </section>
-  <?php endif; ?>
 
   <?php endif; // empty posts ?>
 </main>
@@ -754,7 +757,7 @@ $latestMini     = slice_safe($posts, 1, 5);
 
 (function(){
   const t = document.getElementById('partnersTrack');
-  if(!t) return;
+  if(!t || t.children.length < 2) return;
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduce){ t.style.animation = 'none'; }
 })();
