@@ -14,6 +14,7 @@ $id = (int)($_POST['id'] ?? 0);
 if ($id > 0) {
   $stmt = db()->prepare("DELETE FROM news_posts WHERE id=?");
   $stmt->execute([$id]);
+  safe_record_admin_activity('delete', 'news_post', $id, 'Deleted news post');
 }
 header('Location: ' . url('admin/news/index.php'));
 exit;
