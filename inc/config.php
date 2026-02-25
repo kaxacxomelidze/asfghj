@@ -12,5 +12,6 @@ return [
   'app' => [
     'base_url' => '',        // if in subfolder: '/sspm'
     'session_name' => 'SPGSESSID',
+    'force_https' => true,
   ],
 ];
