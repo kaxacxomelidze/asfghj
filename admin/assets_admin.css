@@ -28,24 +28,8 @@ body.admin-body{
   padding-left:310px; /* reserve space for left-side menu */
 }
 
-.admin-top{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:14px;
-  position:sticky;
-  top:10px;
-  z-index:12;
-  background:rgba(16,26,45,.82);
-  backdrop-filter:blur(10px);
-  padding:12px;
-  border:1px solid var(--line);
-  border-radius:14px;
-}
-.admin-brand-mini{display:flex;align-items:center;gap:10px;min-width:0}
 .admin-kicker{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
-.admin-title{margin:0;font-size:24px;letter-spacing:.2px;line-height:1.2;word-break:break-word}
+.admin-title{margin:2px 0 0;font-size:22px;line-height:1.25;word-break:break-word}
 
 .admin-side-menu{
   position:fixed;
@@ -61,6 +45,7 @@ body.admin-body{
   box-shadow:0 16px 40px rgba(0,0,0,.28);
   z-index:11;
 }
+ .admin-side-head{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(148,163,184,.2)}
 .admin-side-menu h3{
   margin:0 0 10px;
   font-size:13px;
@@ -123,4 +108,4 @@ label{display:block;margin-bottom:6px;color:var(--muted);font-size:13px}
   .admin-links .admin-link{white-space:nowrap}
 }
 @media (max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
-@media (max-width:760px){.admin-title{font-size:20px}.admin-top{position:static}}
+@media (max-width:760px){.admin-title{font-size:19px}}

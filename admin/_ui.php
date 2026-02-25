@@ -21,32 +21,18 @@ function admin_topbar($title, $links = []) {
   }
   $rendered = true;
   ?>
-  <div class="admin-top" role="banner">
-    <div class="admin-brand-mini">
-      <div>
-        <div class="admin-kicker">Admin Panel</div>
-        <h2 class="admin-title"><?=h($title)?></h2>
-      </div>
+  <aside class="admin-side-menu" role="navigation" aria-label="Admin left side menu">
+    <div class="admin-side-head">
+      <div class="admin-kicker">Admin Panel</div>
+      <h2 class="admin-title"><?=h($title)?></h2>
     </div>
-
     <?php if (!empty($links)): ?>
-      <div class="admin-links" aria-label="Admin pages">
-        <?php foreach ($links as $item): ?>
-          <a class="admin-link" href="<?=h((string)$item['href'])?>"><?=h((string)$item['label'])?></a>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-  </div>
-
-  <?php if (!empty($links)): ?>
-    <aside class="admin-side-menu" role="navigation" aria-label="Admin left side menu">
-      <h3>მენიუ</h3>
       <div class="admin-links">
         <?php foreach ($links as $item): ?>
           <a class="admin-link" href="<?=h((string)$item['href'])?>"><?=h((string)$item['label'])?></a>
         <?php endforeach; ?>
       </div>
-    </aside>
-  <?php endif; ?>
+    <?php endif; ?>
+  </aside>
   <?php
 }
