@@ -49,6 +49,31 @@
     a { color: inherit; text-decoration: none; }
     .container { width: min(var(--max), 92%); margin: 0 auto; }
 
+
+    /* Global mobile safety rules across all public pages */
+    img{max-width:100%;height:auto}
+    @media (max-width: 900px){
+      .container{width:min(var(--max),95%)}
+      table{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+      iframe, video{max-width:100%}
+
+      /* common inline-grid patterns used across pages */
+      [style*="grid-template-columns:1fr auto"],
+      [style*="grid-template-columns:1fr 1fr"],
+      [style*="grid-template-columns:minmax(320px,1.1fr) 1fr"],
+      [style*="grid-template-columns: 1fr auto"],
+      [style*="grid-template-columns: 1fr 1fr"]{
+        grid-template-columns:1fr !important;
+      }
+
+      [style*="display:flex"][style*="justify-content:space-between"]{
+        align-items:flex-start !important;
+      }
+
+      input, select, textarea, button{font-size:16px}
+      .btn{max-width:100%}
+    }
+
     /* HEADER */
     .header {
       position: sticky; top: 0; z-index: 60;
