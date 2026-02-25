@@ -1,5 +1,5 @@
 <?php
-$pageTitle = "SPG Portal — სტუდენტური მთავრობა";
+$pageTitle = "საქართველოს სტუდენტური პარლამენტი და მთავრობა — სტუდენტური მთავრობა";
 require __DIR__ . '/inc/bootstrap.php';
 require __DIR__ . '/inc/people_section.php';
 include __DIR__ . '/header.php';
