@@ -278,6 +278,14 @@
       color: var(--muted);
     }
     .mobile a:hover { background:#f1f5f9; color:var(--text); }
+    .mobile-group-title {
+      margin: 10px 12px 4px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 800;
+    }
     .mobile.open { display: block; }
 
     /* ✅ Mobile improvements ONLY (desktop stays exact) */
@@ -377,7 +385,7 @@
 
         <div class="actions">
           <a class="btn primary" href="<?=h(url('membership.php'))?>" data-i18n="header.registerCta">გაწევრიანება</a>
-          <button class="btn burger" id="burger" type="button" aria-label="Open menu">☰</button>
+          <button class="btn burger" id="burger" type="button" aria-label="Open menu" aria-controls="mobile" aria-expanded="false">☰</button>
         </div>
       </div>
     </div>
@@ -421,8 +429,21 @@
       <div class="container mobile" id="mobile">
         <a href="<?=h(url('#home'))?>" data-i18n="nav.home">მთავარი</a>
         <a href="<?=h(url('news.php'))?>" data-i18n="nav.news">სიახლეები</a>
-        <a href="<?=h(url('history.php'))?>" data-i18n="nav.about">ჩვენს შესახებ</a>
-        <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.team">გუნდი</a>
+
+        <div class="mobile-group-title" data-i18n="nav.about">ჩვენს შესახებ</div>
+        <a href="<?=h(url('history.php'))?>" data-i18n="nav.aboutHistory">ისტორია</a>
+        <a href="<?=h(url('mission.php'))?>" data-i18n="nav.aboutMission">მისია</a>
+        <a href="<?=h(url('vision.php'))?>" data-i18n="nav.aboutVision">ხედვა</a>
+        <a href="<?=h(url('structure.php'))?>" data-i18n="nav.aboutStructure">სტრუქტურა</a>
+        <a href="<?=h(url('#about-career'))?>" data-i18n="nav.aboutCareer">კარიერული განვითარების გეგმა</a>
+        <a href="<?=h(url('message.php'))?>" data-i18n="nav.aboutMessage">ხელმძღვანელის მიმართვა</a>
+
+        <div class="mobile-group-title" data-i18n="nav.team">გუნდი</div>
+        <a href="<?=h(url('pr-event.php'))?>" data-i18n="nav.teamPr">PR &amp; EVENT</a>
+        <a href="<?=h(url('aparati.php'))?>" data-i18n="nav.teamAparati">აპარატი</a>
+        <a href="<?=h(url('parlament.php'))?>" data-i18n="nav.teamParlament">სტუდენტური პარლამენტი</a>
+        <a href="<?=h(url('gov.php'))?>" data-i18n="nav.teamGov">სტუდენტური მთავრობა</a>
+
         <a href="<?=h(url('contact.php'))?>" data-i18n="nav.contact">კონტაქტი</a>
         <a href="<?=h(url('membership.php'))?>" data-i18n="header.registerCta">რეგისტრაცია</a>
         <a href="<?=h(url('user-auth.php#dashboard'))?>" data-i18n="header.signin">Sign in</a>
@@ -437,7 +458,16 @@
     // burger mobile
     const burger = $("#burger");
     const mobile = $("#mobile");
-    burger?.addEventListener("click", () => mobile.classList.toggle("open"));
+    burger?.addEventListener("click", () => {
+      const isOpen = mobile.classList.toggle("open");
+      burger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+    $$("a", mobile || document).forEach(link => {
+      link.addEventListener("click", () => {
+        mobile?.classList.remove("open");
+        burger?.setAttribute("aria-expanded", "false");
+      });
+    });
 
     // dropdowns
     const drops = $$(".drop");
