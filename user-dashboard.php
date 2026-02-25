@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
-$pageTitle = 'SPG Portal — User Dashboard';
+$pageTitle = 'საქართველოს სტუდენტური პარლამენტი და მთავრობა — User Dashboard';
 ensure_users_table();
 
 if (!is_user_logged_in()) {

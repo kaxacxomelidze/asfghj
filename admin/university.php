@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare('INSERT INTO user_courses (user_id, course_title, instructor, schedule_text, status, created_at) VALUES (?, ?, ?, ?, ?, ?)');
         $stmt->execute([$userId, $title, trim((string)($_POST['instructor'] ?? '')), trim((string)($_POST['schedule_text'] ?? '')), 'active', date('Y-m-d H:i:s')]);
         $msg = 'Course added.';
+        safe_record_admin_activity('create', 'user_course', (int)$userId, 'Added course for user #' . $userId . ': ' . $title);
       } elseif ($action === 'add_task') {
         $title = trim((string)($_POST['task_title'] ?? ''));
         if ($title === '') throw new RuntimeException('Task title is required.');
@@ -34,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare('INSERT INTO user_tasks (user_id, task_title, due_at, status, created_at) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([$userId, $title, $dueAt, 'todo', date('Y-m-d H:i:s')]);
         $msg = 'Task added.';
+        safe_record_admin_activity('create', 'user_task', (int)$userId, 'Added task for user #' . $userId . ': ' . $title);
       } elseif ($action === 'add_lecturer') {
         $name = normalize_lecturer_name((string)($_POST['lecturer_name'] ?? ''));
         if ($name === '') throw new RuntimeException('Lecturer name is required.');
@@ -42,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare('INSERT INTO user_lecturers (user_id, lecturer_name, department, email, office_room, office_hours, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([$userId, $name, trim((string)($_POST['department'] ?? '')), $email, trim((string)($_POST['office_room'] ?? '')), trim((string)($_POST['office_hours'] ?? '')), date('Y-m-d H:i:s')]);
         $msg = 'Lecturer added.';
+        safe_record_admin_activity('create', 'user_lecturer', (int)$userId, 'Added lecturer for user #' . $userId . ': ' . $name);
       }
     } catch (Throwable $e) {
       $err = $e->getMessage() ?: 'Action failed.';
