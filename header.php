@@ -10,18 +10,24 @@
   <?php
     $orgName = "საქართველოს სტუდენტური პარლამენტი და მთავრობა";
     $metaTitle = isset($pageTitle) ? htmlspecialchars((string)$pageTitle, ENT_QUOTES, "UTF-8") : $orgName;
-    $metaDescription = isset($metaDescription) ? htmlspecialchars((string)$metaDescription, ENT_QUOTES, "UTF-8") : "ოფიციალური ვებგვერდი — სიახლეები, პროექტები, სტუდენტური პარლამენტი და მთავრობა.";
+    $metaDescription = isset($metaDescription) ? htmlspecialchars((string)$metaDescription, ENT_QUOTES, "UTF-8") : "საქართველოს სტუდენტური პარლამენტი და მთავრობა — სტუდენტური პარლამენტი, ახალგაზრდობა, ახალგაზრდები, ტრენინგი, ბანაკი, შეხვედრა და გართობა ერთ პლატფორმაზე.";
+    $metaKeywords = isset($metaKeywords) ? htmlspecialchars((string)$metaKeywords, ENT_QUOTES, "UTF-8") : "საქართველოს სტუდენტური პარლამენტი და მთავრობა, სტუდენტური პარლამენტი, ახალგაზრდობა, ახალგაზრდები, გართობა, შეხვედრა, ტრენინგი, ბანაკი";
     $canonicalUrl = isset($canonicalUrl) ? (string)$canonicalUrl : current_url();
   ?>
   <title><?= $metaTitle ?></title>
   <meta name="description" content="<?= $metaDescription ?>" />
+  <meta name="keywords" content="<?= $metaKeywords ?>" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
   <link rel="canonical" href="<?= h($canonicalUrl) ?>" />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ka_GE" />
   <meta property="og:site_name" content="<?= h($orgName) ?>" />
   <meta property="og:title" content="<?= $metaTitle ?>" />
   <meta property="og:description" content="<?= $metaDescription ?>" />
   <meta property="og:url" content="<?= h($canonicalUrl) ?>" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="<?= $metaTitle ?>" />
+  <meta name="twitter:description" content="<?= $metaDescription ?>" />
   <link rel="preload" as="image" href="<?= h(url('spg_logo2.png')) ?>" />
   <link rel="sitemap" type="application/xml" title="Sitemap" href="<?= h(url('sitemap')) ?>" />
 
