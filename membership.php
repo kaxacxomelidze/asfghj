@@ -47,11 +47,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data[$key] = trim((string)($_POST[$key] ?? ''));
   }
 
-  foreach (array_keys($data) as $req) {
-    if ($data[$req] === '') {
-      $errors[] = 'გთხოვთ, შეავსოთ ყველა სავალდებულო ველი.';
-      break;
+  $requiredLabels = [
+    'full_name' => 'სახელი გვარი',
+    'phone' => 'ტელეფონის ნომერი',
+    'email' => 'ელ. ფოსტის მისამართი',
+    'university_info' => 'უნივერსიტეტი, ფაკულტეტი, კურსი',
+    'age' => 'ასაკი',
+    'legal_address' => 'იურიდიული მისამართი',
+    'desired_direction' => 'სასურველი მიმართულება',
+    'motivation_text' => 'მოტივაცია',
+  ];
+  $missing = [];
+  foreach ($requiredLabels as $key => $label) {
+    if ($data[$key] === '') {
+      $missing[] = $label;
     }
+  }
+  if ($missing) {
+    $errors[] = 'გთხოვთ, შეავსოთ სავალდებულო ველები: ' . implode(', ', $missing) . '.';
+  }
+
+  if ($data['email'] !== '' && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+    $errors[] = 'ელ. ფოსტის მისამართი არასწორია.';
+  }
+
+  if (!in_array($data['desired_direction'], $directionOptions, true)) {
+    $errors[] = 'აირჩიეთ სასურველი მიმართულება ჩამონათვალიდან.';
+  }
+
+  $data['motivation_text'] = preg_replace('/\r\n?/', "\n", $data['motivation_text']) ?? $data['motivation_text'];
+  $motivationWords = word_count_ka($data['motivation_text']);
+  if ($motivationWords > 50) {
+    $errors[] = 'მოტივაცია უნდა იყოს მაქსიმუმ 50 სიტყვა.';
   }
 
   if ($data['email'] !== '' && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {

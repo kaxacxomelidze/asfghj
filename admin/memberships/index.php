@@ -9,7 +9,6 @@ ensure_membership_applications_table();
 try {
   $rows = db()->query('SELECT id, full_name, phone, email, university_info, age, legal_address, desired_direction, motivation_text, created_at FROM membership_applications ORDER BY created_at DESC, id DESC')->fetchAll();
 } catch (Throwable $e) {
-  // Fallback for older schema deployments
   $legacyRows = db()->query('SELECT id, first_name, last_name, personal_id, phone, university, faculty, email, additional_info, created_at FROM membership_applications ORDER BY created_at DESC, id DESC')->fetchAll();
   $rows = [];
   foreach ($legacyRows as $r) {
@@ -27,7 +26,6 @@ try {
     ];
   }
 }
-
 ?>
 <!doctype html>
 <html lang="en">
@@ -39,6 +37,22 @@ try {
       ['href' => url('admin/logout.php'), 'label' => 'Logout'],
     ]); ?>
 
+    <style>
+      .apps-list{display:grid;gap:12px;margin-top:14px}
+      .app-card{background:linear-gradient(180deg,#101a2d,#0b1424);border:1px solid rgba(148,163,184,.24);border-radius:14px;padding:14px}
+      .app-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+      .app-id{font-weight:900;color:#bfdbfe}
+      .app-date{font-size:12px;color:#9fb2cc}
+      .app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .app-item{background:rgba(11,20,36,.55);border:1px solid rgba(148,163,184,.16);border-radius:10px;padding:9px}
+      .app-item b{display:block;color:#9fb2cc;font-size:12px;margin-bottom:3px}
+      .app-item span{color:#e6edf7;font-size:13px;line-height:1.45;word-break:break-word}
+      .app-motivation{margin-top:10px;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.25);border-radius:10px;padding:10px}
+      .app-motivation b{display:block;color:#93c5fd;font-size:12px;margin-bottom:4px}
+      .app-motivation .text{white-space:pre-line;word-break:break-word;overflow-wrap:anywhere;line-height:1.55;font-size:13px;color:#e2e8f0;max-height:160px;overflow:auto}
+      @media (max-width:900px){.app-grid{grid-template-columns:1fr}}
+    </style>
+
     <div class="grid-3">
       <div class="admin-card"><label>Total</label><div style="font-size:30px;font-weight:900"><?= count($rows) ?></div></div>
       <?php $todayCount = 0; foreach($rows as $r){ if (str_starts_with((string)$r['created_at'], date('Y-m-d'))) $todayCount++; } ?>
@@ -46,43 +60,35 @@ try {
       <div class="admin-card"><label>Latest</label><div style="font-size:15px;font-weight:700;color:#cbd5e1"><?= $rows ? h((string)$rows[0]['created_at']) : '—' ?></div></div>
     </div>
 
-    <div class="admin-card" style="margin-top:14px">
-      <div style="margin-bottom:10px;color:#9fb2cc;font-size:13px">Updated membership form fields: full profile, direction, and motivation (max 50 words).</div>
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>სახელი გვარი</th>
-            <th>ტელეფონი</th>
-            <th>ელ. ფოსტა</th>
-            <th>უნივერსიტეტი/ფაკულტეტი/კურსი</th>
-            <th>ასაკი</th>
-            <th>იურიდიული მისამართი</th>
-            <th>სასურველი მიმართულება</th>
-            <th>მოტივაცია</th>
-            <th>თარიღი</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if(!$rows): ?>
-            <tr><td colspan="10">No membership applications yet.</td></tr>
-          <?php else: foreach($rows as $r): ?>
-            <tr>
-              <td><?= (int)$r['id'] ?></td>
-              <td><?= h((string)($r['full_name'] ?? '')) ?></td>
-              <td><?= h((string)($r['phone'] ?? '')) ?></td>
-              <td><?= h((string)($r['email'] ?? '')) ?></td>
-              <td><?= h((string)($r['university_info'] ?? '')) ?></td>
-              <td><?= h((string)($r['age'] ?? '')) ?></td>
-              <td><?= h((string)($r['legal_address'] ?? '')) ?></td>
-              <td><?= h((string)($r['desired_direction'] ?? '')) ?></td>
-              <td style="min-width:260px"><?= nl2br(h((string)($r['motivation_text'] ?? ''))) ?></td>
-              <td><?= h((string)$r['created_at']) ?></td>
-            </tr>
-          <?php endforeach; endif; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php if(!$rows): ?>
+      <div class="admin-card" style="margin-top:14px">No membership applications yet.</div>
+    <?php else: ?>
+      <div class="apps-list">
+        <?php foreach($rows as $r): ?>
+          <article class="app-card">
+            <div class="app-head">
+              <div class="app-id">Application #<?= (int)$r['id'] ?></div>
+              <div class="app-date"><?= h((string)$r['created_at']) ?></div>
+            </div>
+
+            <div class="app-grid">
+              <div class="app-item"><b>სახელი გვარი</b><span><?= h((string)($r['full_name'] ?? '')) ?></span></div>
+              <div class="app-item"><b>ტელეფონის ნომერი</b><span><?= h((string)($r['phone'] ?? '')) ?></span></div>
+              <div class="app-item"><b>ელ. ფოსტის მისამართი</b><span><?= h((string)($r['email'] ?? '')) ?></span></div>
+              <div class="app-item"><b>უნივერსიტეტი, ფაკულტეტი, კურსი</b><span><?= h((string)($r['university_info'] ?? '')) ?></span></div>
+              <div class="app-item"><b>ასაკი</b><span><?= h((string)($r['age'] ?? '')) ?></span></div>
+              <div class="app-item"><b>იურიდიული მისამართი</b><span><?= h((string)($r['legal_address'] ?? '')) ?></span></div>
+              <div class="app-item" style="grid-column:1/-1"><b>სასურველი მიმართულება</b><span><?= h((string)($r['desired_direction'] ?? '')) ?></span></div>
+            </div>
+
+            <div class="app-motivation">
+              <b>მოტივაცია</b>
+              <div class="text"><?= h((string)($r['motivation_text'] ?? '')) ?></div>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </div>
 </body>
 </html>
