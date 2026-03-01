@@ -46,16 +46,53 @@ if (BASE_URL === '') {
   define('AUTO_BASE_URL', BASE_URL);
 }
 
+
+function request_is_https(): bool {
+  if (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') return true;
+  if ((string)($_SERVER['SERVER_PORT'] ?? '') === '443') return true;
+  if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && str_contains(strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']), 'https')) return true;
+  if (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') return true;
+  return false;
+}
+
+function should_force_https(): bool {
+  return (bool)($GLOBALS['config']['app']['force_https'] ?? false);
+}
+
+if (should_force_https() && !request_is_https() && PHP_SAPI !== 'cli') {
+  $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+  if (!preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/i', $host)) {
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+    header('Location: https://' . $host . $uri, true, 301);
+    exit;
+  }
+}
+
 /** Build absolute URL within this project */
 function url(string $path = ''): string {
   $base = AUTO_BASE_URL;
-  $path = '/' . ltrim($path, '/');
+  $path = ltrim($path, '/');
+
+  if ($path !== '' && !str_starts_with($path, 'admin/')) {
+    $path = preg_replace('/\.php(?=($|[?#]))/i', '', $path) ?? $path;
+  }
+
+  $path = '/' . $path;
   if ($base === '' || $base === '/') return $path;
   return $base . $path;
 }
 
 /** Escape HTML */
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+
+
+/** Current absolute URL for canonical tags */
+function current_url(): string {
+  $scheme = request_is_https() ? 'https' : 'http';
+  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+  $uri = $_SERVER['REQUEST_URI'] ?? url('/');
+  return $scheme . '://' . $host . $uri;
+}
 
 /** Normalize user-provided image paths */
 function normalize_image_path(string $path): string {
@@ -188,7 +225,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     exit("Headers already sent in: {$file} on line {$line}. Make sure every page loads bootstrap.php BEFORE header.php.");
   }
   session_name($config['app']['session_name'] ?? 'SPGSESSID');
-  $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+  $secureCookie = request_is_https();
   if (PHP_VERSION_ID >= 70300) {
     session_set_cookie_params([
       'lifetime' => 0,
@@ -247,13 +284,15 @@ function fallback_sqlite_pdo(): PDO {
     "CREATE TABLE IF NOT EXISTS news_gallery (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL, image_path TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, lecturer_name TEXT, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS contact_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT, message TEXT NOT NULL, created_at TEXT NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS membership_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, personal_id TEXT NOT NULL, phone TEXT NOT NULL, university TEXT NOT NULL, faculty TEXT NOT NULL, email TEXT, additional_info TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS membership_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, personal_id TEXT NOT NULL, phone TEXT NOT NULL, university TEXT NOT NULL, faculty TEXT NOT NULL, email TEXT, additional_info TEXT, full_name TEXT, university_info TEXT, age TEXT, legal_address TEXT, desired_direction TEXT, motivation_text TEXT, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS people_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, page_key TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, role_title TEXT, image_path TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_courses (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course_title TEXT NOT NULL, instructor TEXT, schedule_text TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, task_title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'todo', created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, message TEXT NOT NULL, level TEXT NOT NULL DEFAULT 'info', is_read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_lecturers (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, lecturer_name TEXT NOT NULL, department TEXT, email TEXT, office_room TEXT, office_hours TEXT, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS admin_login_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, admin_id INTEGER, ip_address TEXT, user_agent TEXT, status TEXT NOT NULL, reason TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS admin_activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER NOT NULL, username TEXT NOT NULL, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id INTEGER, details TEXT, ip_address TEXT, user_agent TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS partner_logos (id INTEGER PRIMARY KEY AUTOINCREMENT, image_path TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL)",
   ];
   foreach ($schema as $sql) {
     $sqlite->exec($sql);
@@ -325,6 +364,12 @@ function ensure_admin_permissions_table() {
       permission VARCHAR(64) NOT NULL,
       PRIMARY KEY (admin_id, permission)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Backfill newly introduced permissions for existing admins
+    db()->exec("INSERT IGNORE INTO admin_permissions (admin_id, permission)
+      SELECT id, 'partners.manage' FROM admins");
+    db()->exec("INSERT IGNORE INTO admin_permissions (admin_id, permission)
+      SELECT id, 'admin.logs.view' FROM admins");
   } catch (Throwable $e) {
     // ignore if DB user lacks permissions
   }
@@ -375,6 +420,7 @@ function available_admin_permissions(): array {
     'news.create' => 'Create news',
     'news.edit' => 'Edit news',
     'news.delete' => 'Delete news',
+    'partners.manage' => 'Manage partners section logos',
     'people.manage' => 'Manage team members',
     'contact.view' => 'View contact submissions',
     'membership.view' => 'View membership applications',
@@ -410,6 +456,7 @@ function admin_permissions(int $adminId): array {
 
 function has_permission(string $perm): bool {
   if (!is_admin()) return false;
+  if ((string)($_SESSION['admin_username'] ?? '') === 'admin') return true;
   $adminId = (int)($_SESSION['admin_id'] ?? 0);
   $perms = admin_permissions($adminId);
   if (!$perms && admin_permissions_total_count() === 0) return true;
@@ -462,6 +509,66 @@ function record_admin_login_log(string $username, $adminId, string $status, stri
     ]);
   } catch (Throwable $e) {
     // ignore if DB is unavailable
+  }
+}
+
+
+
+function ensure_admin_activity_logs_table() {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS admin_activity_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      admin_id INT NOT NULL,
+      username VARCHAR(120) NOT NULL,
+      action VARCHAR(64) NOT NULL,
+      entity_type VARCHAR(64) NOT NULL,
+      entity_id INT DEFAULT NULL,
+      details TEXT DEFAULT NULL,
+      ip_address VARCHAR(64) DEFAULT NULL,
+      user_agent VARCHAR(255) DEFAULT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX idx_admin_activity_logs_created_at (created_at),
+      INDEX idx_admin_activity_logs_admin_id (admin_id),
+      INDEX idx_admin_activity_logs_entity_type (entity_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function record_admin_activity(string $action, string $entityType, ?int $entityId = null, string $details = ''): void {
+  if (!is_admin()) return;
+  ensure_admin_activity_logs_table();
+  $adminId = (int)($_SESSION['admin_id'] ?? 0);
+  $username = (string)($_SESSION['admin_username'] ?? 'admin');
+  $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+  $ua = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+  try {
+    $stmt = db()->prepare('INSERT INTO admin_activity_logs (admin_id, username, action, entity_type, entity_id, details, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([
+      $adminId,
+      $username,
+      $action,
+      $entityType,
+      $entityId,
+      $details !== '' ? $details : null,
+      $ip !== '' ? $ip : null,
+      $ua !== '' ? $ua : null,
+      date('Y-m-d H:i:s'),
+    ]);
+  } catch (Throwable $e) {
+    // ignore if DB is unavailable
+  }
+}
+
+function safe_record_admin_activity(string $action, string $entityType, ?int $entityId = null, string $details = ''): void {
+  try {
+    record_admin_activity($action, $entityType, $entityId, $details);
+  } catch (Throwable $e) {
+    // do not break main flow
   }
 }
 
@@ -807,6 +914,47 @@ function get_news_gallery(int $postId): array {
   return $out;
 }
 
+
+function ensure_partner_logos_table() {
+  static $done = false;
+  if ($done) return;
+  $done = true;
+  try {
+    db()->exec("CREATE TABLE IF NOT EXISTS partner_logos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      image_path VARCHAR(255) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      INDEX (sort_order),
+      INDEX (is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  } catch (Throwable $e) {
+    // ignore if DB user lacks permissions
+  }
+}
+
+function get_partner_logos(int $limit = 30): array {
+  ensure_partner_logos_table();
+  try {
+    $stmt = db()->prepare("SELECT id, image_path FROM partner_logos WHERE is_active=1 ORDER BY sort_order ASC, id DESC LIMIT :lim");
+    $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+  } catch (Throwable $e) {
+    return [];
+  }
+
+  $out = [];
+  foreach ($rows as $row) {
+    $out[] = [
+      'id' => (int)$row['id'],
+      'img' => normalize_image_path((string)$row['image_path']),
+    ];
+  }
+  return $out;
+}
+
 function ensure_contact_messages_table() {
   static $done = false;
   if ($done) return;
@@ -841,9 +989,31 @@ function ensure_membership_applications_table() {
       faculty VARCHAR(190) NOT NULL,
       email VARCHAR(190) DEFAULT NULL,
       additional_info TEXT DEFAULT NULL,
+      full_name VARCHAR(190) DEFAULT NULL,
+      university_info VARCHAR(255) DEFAULT NULL,
+      age VARCHAR(20) DEFAULT NULL,
+      legal_address VARCHAR(255) DEFAULT NULL,
+      desired_direction VARCHAR(190) DEFAULT NULL,
+      motivation_text TEXT DEFAULT NULL,
       created_at DATETIME NOT NULL,
       INDEX (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Backward-safe column ensures for existing installs
+    foreach ([
+      "ALTER TABLE membership_applications ADD COLUMN full_name VARCHAR(190) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN university_info VARCHAR(255) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN age VARCHAR(20) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN legal_address VARCHAR(255) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN desired_direction VARCHAR(190) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN motivation_text TEXT DEFAULT NULL"
+    ] as $alterSql) {
+      try {
+        db()->exec($alterSql);
+      } catch (Throwable $e2) {
+        // ignore when column already exists / permission denied
+      }
+    }
   } catch (Throwable $e) {
     // ignore if DB user lacks permissions
   }

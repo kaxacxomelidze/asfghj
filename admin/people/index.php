@@ -229,6 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         (?, ?, ?, ?, ?, ?, NOW())'
                 );
                 $stmt->execute([$pageKey, $firstName, $lastName, $roleTitle, $imagePath, $sortOrder]);
+                $newId = (int)db()->lastInsertId();
+                safe_record_admin_activity('create', 'people_profile', $newId, 'Created people profile on page: ' . $pageKey);
 
                 header('Location: ' . url('admin/people/index.php'));
                 exit;
@@ -283,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE id = ? LIMIT 1'
                 );
                 $stmt->execute([$pageKey, $firstName, $lastName, $roleTitle, $finalImage, $sortOrder, $id]);
+                safe_record_admin_activity('update', 'people_profile', $id, 'Updated people profile on page: ' . $pageKey);
 
                 header('Location: ' . url('admin/people/index.php'));
                 exit;
@@ -306,6 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = db()->prepare('DELETE FROM people_profiles WHERE id = ? LIMIT 1');
             $stmt->execute([$id]);
+            safe_record_admin_activity('delete', 'people_profile', $id, 'Deleted people profile');
         }
 
         header('Location: ' . url('admin/people/index.php'));
