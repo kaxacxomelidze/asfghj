@@ -26,10 +26,11 @@ $rows = db()->query('SELECT id, first_name, last_name, personal_id, phone, unive
     </div>
 
     <div class="admin-card" style="margin-top:14px">
+      <div style="margin-bottom:10px;color:#9fb2cc;font-size:13px">Field <b>Motivational Letter</b> is submitted from /membership.</div>
       <table class="admin-table">
         <thead>
           <tr>
-            <th>ID</th><th>Name</th><th>Personal ID</th><th>Phone</th><th>University</th><th>Faculty</th><th>Email</th><th>Other Info</th><th>Date</th>
+            <th>ID</th><th>Name</th><th>Personal ID</th><th>Phone</th><th>University</th><th>Faculty</th><th>Email</th><th>Motivational Letter</th><th>Date</th>
           </tr>
         </thead>
         <tbody>
@@ -44,7 +45,7 @@ $rows = db()->query('SELECT id, first_name, last_name, personal_id, phone, unive
               <td><?= h((string)$r['university']) ?></td>
               <td><?= h((string)$r['faculty']) ?></td>
               <td><?= h((string)($r['email'] ?? '')) ?></td>
-              <td><?= nl2br(h((string)($r['additional_info'] ?? ''))) ?></td>
+              <td style="min-width:260px"><?= nl2br(h((string)($r['additional_info'] ?? ''))) ?></td>
               <td><?= h((string)$r['created_at']) ?></td>
             </tr>
           <?php endforeach; endif; ?>
