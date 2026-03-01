@@ -81,6 +81,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors[] = 'მოტივაცია უნდა იყოს მაქსიმუმ 50 სიტყვა.';
   }
 
+  if ($data['email'] !== '' && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+    $errors[] = 'ელ. ფოსტის მისამართი არასწორია.';
+  }
+
+  if (!in_array($data['desired_direction'], $directionOptions, true)) {
+    $errors[] = 'აირჩიეთ სასურველი მიმართულება ჩამონათვალიდან.';
+  }
+
+  $motivationWords = word_count_ka($data['motivation_text']);
+  if ($motivationWords > 50) {
+    $errors[] = 'მოტივაცია უნდა იყოს მაქსიმუმ 50 სიტყვა.';
+  }
+
   if (!$errors) {
     try {
       // Preferred schema with detailed fields
