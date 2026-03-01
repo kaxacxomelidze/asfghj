@@ -284,7 +284,7 @@ function fallback_sqlite_pdo(): PDO {
     "CREATE TABLE IF NOT EXISTS news_gallery (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL, image_path TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, lecturer_name TEXT, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS contact_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT, message TEXT NOT NULL, created_at TEXT NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS membership_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, personal_id TEXT NOT NULL, phone TEXT NOT NULL, university TEXT NOT NULL, faculty TEXT NOT NULL, email TEXT, additional_info TEXT, created_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS membership_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, personal_id TEXT NOT NULL, phone TEXT NOT NULL, university TEXT NOT NULL, faculty TEXT NOT NULL, email TEXT, additional_info TEXT, full_name TEXT, university_info TEXT, age TEXT, legal_address TEXT, desired_direction TEXT, motivation_text TEXT, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS people_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, page_key TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, role_title TEXT, image_path TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_courses (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course_title TEXT NOT NULL, instructor TEXT, schedule_text TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS user_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, task_title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'todo', created_at TEXT NOT NULL)",
@@ -989,9 +989,31 @@ function ensure_membership_applications_table() {
       faculty VARCHAR(190) NOT NULL,
       email VARCHAR(190) DEFAULT NULL,
       additional_info TEXT DEFAULT NULL,
+      full_name VARCHAR(190) DEFAULT NULL,
+      university_info VARCHAR(255) DEFAULT NULL,
+      age VARCHAR(20) DEFAULT NULL,
+      legal_address VARCHAR(255) DEFAULT NULL,
+      desired_direction VARCHAR(190) DEFAULT NULL,
+      motivation_text TEXT DEFAULT NULL,
       created_at DATETIME NOT NULL,
       INDEX (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Backward-safe column ensures for existing installs
+    foreach ([
+      "ALTER TABLE membership_applications ADD COLUMN full_name VARCHAR(190) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN university_info VARCHAR(255) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN age VARCHAR(20) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN legal_address VARCHAR(255) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN desired_direction VARCHAR(190) DEFAULT NULL",
+      "ALTER TABLE membership_applications ADD COLUMN motivation_text TEXT DEFAULT NULL"
+    ] as $alterSql) {
+      try {
+        db()->exec($alterSql);
+      } catch (Throwable $e2) {
+        // ignore when column already exists / permission denied
+      }
+    }
   } catch (Throwable $e) {
     // ignore if DB user lacks permissions
   }

@@ -178,6 +178,12 @@ CREATE TABLE IF NOT EXISTS membership_applications (
   faculty VARCHAR(190) NOT NULL,
   email VARCHAR(190) DEFAULT NULL,
   additional_info TEXT DEFAULT NULL,
+  full_name VARCHAR(190) DEFAULT NULL,
+  university_info VARCHAR(255) DEFAULT NULL,
+  age VARCHAR(20) DEFAULT NULL,
+  legal_address VARCHAR(255) DEFAULT NULL,
+  desired_direction VARCHAR(190) DEFAULT NULL,
+  motivation_text TEXT DEFAULT NULL,
   created_at DATETIME NOT NULL,
   INDEX idx_membership_applications_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
