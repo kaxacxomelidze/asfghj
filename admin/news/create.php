@@ -342,6 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
+      safe_record_admin_activity('create', 'news_post', $postId, 'Created news post: ' . $data['title']);
       header('Location: ' . url('admin/news/index.php'));
       exit;
     }

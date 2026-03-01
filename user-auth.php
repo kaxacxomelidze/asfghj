@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
-$pageTitle = 'SPG Portal — მომხმარებლის ავტორიზაცია';
+$pageTitle = 'საქართველოს სტუდენტური პარლამენტი და მთავრობა — მომხმარებლის ავტორიზაცია';
 ensure_users_table();
 $lecturerOptions = list_available_lecturers();
 

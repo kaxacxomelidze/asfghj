@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           foreach ($perms as $perm) $stmt->execute([$adminId, (string)$perm]);
         }
         $notice = 'Admin added.';
+        safe_record_admin_activity('create', 'admin', $adminId, 'Created admin user: ' . $username);
       }
     }
   }
@@ -59,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($perms as $perm) $stmt->execute([$adminId, (string)$perm]);
       }
       $notice = 'Admin updated.';
+      safe_record_admin_activity('update', 'admin', $adminId, 'Updated admin account and permissions');
     }
   }
 }
