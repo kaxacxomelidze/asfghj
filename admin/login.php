@@ -4,13 +4,20 @@ declare(strict_types=1);
 require __DIR__ . '/../inc/bootstrap.php';
 require __DIR__ . '/_ui.php';
 
+/* ---------------- SESSION ---------------- */
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+    ]);
     session_start();
 }
 
-/**
- * Safe wrapper so logging failures never break login flow.
- */
+/* ---------------- SAFE LOG ---------------- */
+
 function safe_record_admin_login_log(string $username, ?int $adminId, string $status, string $message): void
 {
     try {
@@ -18,168 +25,180 @@ function safe_record_admin_login_log(string $username, ?int $adminId, string $st
             record_admin_login_log($username, $adminId, $status, $message);
         }
     } catch (Throwable $e) {
-        // Never break login page because log table/function failed
-        error_log('record_admin_login_log failed: ' . $e->getMessage());
+        error_log('Login log failed: ' . $e->getMessage());
     }
 }
 
-/**
- * Reset / set captcha numbers
- */
+/* ---------------- HARD CAPTCHA (ONLY LOG + SQRT) ---------------- */
+
 function set_captcha(): void
 {
-    $_SESSION['captcha_a'] = random_int(1, 9);
-    $_SESSION['captcha_b'] = random_int(1, 9);
+    // 50% square root, 50% logarithm
+    $type = random_int(1, 2);
+
+    /* -------- VERY HARD SQUARE ROOT -------- */
+    if ($type === 1) {
+
+        // Large perfect squares
+        $n = random_int(20, 80);   // √(400..6400)
+        $square = $n * $n;
+
+        $_SESSION['captcha_q'] = "√({$square})";
+        $_SESSION['captcha_expected'] = (string)$n;
+        return;
+    }
+
+    /* -------- VERY HARD LOGARITHM -------- */
+
+    // Choose base 2, 3, 5, or 10
+    $bases = [2, 3, 5, 10];
+    $base = $bases[array_rand($bases)];
+
+    // Higher exponent
+    $exp = random_int(3, 8); // makes it harder
+
+    $value = $base ** $exp;
+
+    $_SESSION['captcha_q'] = "log{$base}({$value})";
+    $_SESSION['captcha_expected'] = (string)$exp;
 }
 
-/**
- * Small helper for session keys
- */
-function init_login_session_state(): void
+/* ---------------- LOGIN STATE ---------------- */
+
+function init_login_state(): void
 {
-    if (!isset($_SESSION['login_attempts']) || !is_int($_SESSION['login_attempts'])) {
+    if (!isset($_SESSION['login_attempts'])) {
         $_SESSION['login_attempts'] = 0;
     }
-    if (!isset($_SESSION['login_locked_until']) || !is_int($_SESSION['login_locked_until'])) {
+    if (!isset($_SESSION['login_locked_until'])) {
         $_SESSION['login_locked_until'] = 0;
     }
 }
 
-init_login_session_state();
+init_login_state();
 
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
 if ($requestMethod !== 'POST') {
-    // Always refresh captcha on page reload/open
     set_captcha();
-} elseif (empty($_SESSION['captcha_a']) || empty($_SESSION['captcha_b'])) {
+} elseif (empty($_SESSION['captcha_q']) || empty($_SESSION['captcha_expected'])) {
     set_captcha();
 }
 
-// If already logged in, redirect
-if (function_exists('is_admin') && is_admin()) {
-    header('Location: ' . url('admin/news/index.php'));
+/* ---------------- PREVENT LOOP ---------------- */
+
+if (!empty($_SESSION['admin_id']) || !empty($_SESSION['admin_logged_in'])) {
+    header('Location: /admin/news/index.php');
     exit;
 }
 
+/* ---------------- LOGIN ---------------- */
+
 $error = '';
-$lockoutSeconds = 300; // 5 minutes
 $maxAttempts = 5;
+$lockTime = 300;
 
 if ($requestMethod === 'POST') {
-    try {
-        csrf_verify();
 
+    try {
+
+        csrf_verify();
         $now = time();
 
         if ((int)$_SESSION['login_locked_until'] > $now) {
-            $remaining = (int)$_SESSION['login_locked_until'] - $now;
-            $error = 'Too many attempts. Try again in ' . $remaining . ' seconds.';
-            safe_record_admin_login_log((string)($_POST['username'] ?? ''), null, 'blocked', 'temporary lockout');
+            $remaining = $_SESSION['login_locked_until'] - $now;
+            $error = "Too many attempts. Try again in {$remaining} seconds.";
         } else {
+
             $captcha  = trim((string)($_POST['captcha'] ?? ''));
-            $expected = (string)(((int)($_SESSION['captcha_a'] ?? 0)) + ((int)($_SESSION['captcha_b'] ?? 0)));
+            $expected = (string)($_SESSION['captcha_expected'] ?? '');
 
             $username = trim((string)($_POST['username'] ?? ''));
             $password = (string)($_POST['password'] ?? '');
 
             if ($username === '' || $password === '') {
-                $error = 'Username and password are required.';
-                safe_record_admin_login_log($username, null, 'failed', 'empty username/password');
+                $error = 'Username and password required.';
             } elseif ($captcha === '' || !hash_equals($expected, $captcha)) {
-                $error = 'Captcha is incorrect';
-                safe_record_admin_login_log($username, null, 'failed', 'captcha incorrect');
+                $error = 'Incorrect captcha.';
             } else {
-                try {
-                    $pdo = db();
-                    $stmt = $pdo->prepare('SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1');
-                    $stmt->execute([$username]);
-                    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    if ($admin && isset($admin['password_hash']) && password_verify($password, (string)$admin['password_hash'])) {
-                        session_regenerate_id(true);
+                $pdo = db();
+                $stmt = $pdo->prepare('SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1');
+                $stmt->execute([$username]);
+                $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                        $_SESSION['admin_id'] = (int)$admin['id'];
-                        $_SESSION['admin_username'] = (string)$admin['username'];
+                if ($admin && password_verify($password, $admin['password_hash'])) {
 
-                        $_SESSION['login_attempts'] = 0;
-                        $_SESSION['login_locked_until'] = 0;
+                    session_regenerate_id(true);
 
-                        safe_record_admin_login_log($username, (int)$admin['id'], 'success', 'login successful');
+                    $_SESSION['admin_id'] = (int)$admin['id'];
+                    $_SESSION['admin_username'] = $admin['username'];
+                    $_SESSION['admin_logged_in'] = true;
+                    $_SESSION['role'] = 'admin';
 
-                        header('Location: ' . url('admin/news/index.php'));
-                        exit;
-                    }
+                    $_SESSION['login_attempts'] = 0;
+                    $_SESSION['login_locked_until'] = 0;
 
-                    $error = 'Wrong username or password';
-                    safe_record_admin_login_log($username, null, 'failed', 'wrong credentials');
-                } catch (Throwable $e) {
-                    $error = 'Temporary server/database error. Please try again.';
-                    safe_record_admin_login_log($username, null, 'failed', 'db unavailable');
-                    error_log('Admin login DB error: ' . $e->getMessage());
+                    safe_record_admin_login_log($username, (int)$admin['id'], 'success', 'login success');
+
+                    header('Location: /admin/news/index.php');
+                    exit;
                 }
+
+                $error = 'Wrong username or password.';
             }
         }
+
     } catch (Throwable $e) {
-        $error = 'Request validation failed. Please refresh and try again.';
-        error_log('Admin login request error: ' . $e->getMessage());
-        safe_record_admin_login_log((string)($_POST['username'] ?? ''), null, 'failed', 'request validation failed');
+        $error = 'Server error.';
     }
 
     if ($error !== '') {
-        $_SESSION['login_attempts'] = ((int)$_SESSION['login_attempts']) + 1;
-
-        if ((int)$_SESSION['login_attempts'] >= $maxAttempts) {
-            $_SESSION['login_locked_until'] = time() + $lockoutSeconds;
+        $_SESSION['login_attempts']++;
+        if ($_SESSION['login_attempts'] >= $maxAttempts) {
+            $_SESSION['login_locked_until'] = time() + $lockTime;
         }
-
         set_captcha();
     }
 }
+
+$captchaQ = $_SESSION['captcha_q'] ?? '';
+$prefillUser = $_POST['username'] ?? '';
 ?>
 <!doctype html>
 <html lang="en">
 <?php admin_head('Admin Login'); ?>
 <body class="admin-body admin-login-page">
-  <main class="admin-login-shell" role="main">
-    <form class="admin-card admin-login-card" method="post" novalidate>
-      <div class="admin-login-head">
-        <img src="<?= h(url('spg_logo2.png')) ?>" alt="SPG Logo" width="52" height="52">
-        <div>
-          <h2>Admin Login</h2>
-          <p class="admin-login-subtitle">Secure access to administration panel.</p>
-        </div>
-      </div>
 
-      <?php if ($error !== ''): ?>
-        <div class="err"><?= h($error) ?></div>
-      <?php endif; ?>
+<form method="post" style="max-width:420px;margin:100px auto;background:#111;padding:35px;border-radius:14px;color:white;">
+<h2>Admin Login</h2>
 
-      <input type="hidden" name="_csrf" value="<?= h(csrf_token()) ?>">
+<?php if ($error !== ''): ?>
+<div style="background:#300;padding:10px;margin-bottom:10px;">
+<?= htmlspecialchars($error) ?>
+</div>
+<?php endif; ?>
 
-      <div class="admin-field">
-        <label for="username">Username</label>
-        <input id="username" name="username" autocomplete="username" required
-               value="<?= h((string)($_POST['username'] ?? '')) ?>">
-      </div>
+<input type="hidden" name="_csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-      <div class="admin-field">
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
-      </div>
+<div>
+<label>Username</label>
+<input name="username" value="<?= htmlspecialchars($prefillUser) ?>" required>
+</div>
 
-      <div class="admin-field">
-        <label for="captcha">
-          Captcha: <strong><?= h((string)($_SESSION['captcha_a'] ?? 0)) ?> + <?= h((string)($_SESSION['captcha_b'] ?? 0)) ?></strong>
-        </label>
-        <input id="captcha" name="captcha" inputmode="numeric" autocomplete="off" required>
-      </div>
+<div>
+<label>Password</label>
+<input type="password" name="password" required>
+</div>
 
-      <button class="btn admin-login-btn" type="submit">Login</button>
+<div style="margin-top:15px;">
+<label>Solve: <strong><?= htmlspecialchars($captchaQ) ?></strong></label>
+<input name="captcha" required>
+</div>
 
-      <p class="admin-login-note">
-        If you cannot login, run <a href="<?= h(url('admin/setup_admin.php')) ?>">setup_admin.php</a> once.
-      </p>
-    </form>
-  </main>
+<button type="submit" style="margin-top:20px;">Login</button>
+
+</form>
+
 </body>
 </html>

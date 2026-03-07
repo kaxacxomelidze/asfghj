@@ -1,12 +1,15 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
+
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
+
 $success = (($_GET['submitted'] ?? '') === '1');
 
 $pageTitle = 'საქართველოს სტუდენტური პარლამენტი და მთავრობა — გაწევრიანების განაცხადი';
 $metaDescription = 'გაწევრიანების განაცხადი სტუდენტური პარლამენტისა და მთავრობისთვის.';
 $metaKeywords = 'გაწევრიანება, განაცხადი, სტუდენტური პარლამენტი, სტუდენტური მთავრობა';
+
 ensure_membership_applications_table();
 
 $directionOptions = [
@@ -44,8 +47,16 @@ function word_count_ka(string $text): int {
   return is_array($parts) ? count(array_filter($parts, fn($x) => $x !== '')) : 0;
 }
 
+/**
+ * Always redirect to a clean SITE-ROOT URL, never a filesystem path.
+ * Adjust these two if your public URL differs:
+ */
+$FORM_PATH = '/membership';                 // URL where this page is reachable
+$SUCCESS_URL = $FORM_PATH . '?submitted=1'; // success redirect
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   csrf_verify();
+
   foreach ($data as $key => $_) {
     $data[$key] = trim((string)($_POST[$key] ?? ''));
   }
@@ -60,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'desired_direction' => 'სასურველი მიმართულება',
     'motivation_text' => 'მოტივაცია',
   ];
+
   $missing = [];
   foreach ($requiredLabels as $key => $label) {
     if ($data[$key] === '') {
@@ -74,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors[] = 'ელ. ფოსტის მისამართი არასწორია.';
   }
 
-  if (!in_array($data['desired_direction'], $directionOptions, true)) {
+  if ($data['desired_direction'] === '' || !in_array($data['desired_direction'], $directionOptions, true)) {
     $errors[] = 'აირჩიეთ სასურველი მიმართულება ჩამონათვალიდან.';
   }
 
@@ -87,7 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!$errors) {
     try {
       // Preferred schema with detailed fields
-      $stmt = db()->prepare('INSERT INTO membership_applications (first_name, last_name, personal_id, phone, university, faculty, email, additional_info, full_name, university_info, age, legal_address, desired_direction, motivation_text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      $stmt = db()->prepare('
+        INSERT INTO membership_applications
+          (first_name, last_name, personal_id, phone, university, faculty, email, additional_info,
+           full_name, university_info, age, legal_address, desired_direction, motivation_text, created_at)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ');
       $stmt->execute([
         $data['full_name'],
         '-',
@@ -107,7 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       ]);
     } catch (Throwable $e) {
       // Backward compatibility for older schema
-      $stmt = db()->prepare('INSERT INTO membership_applications (first_name, last_name, personal_id, phone, university, faculty, email, additional_info, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      $stmt = db()->prepare('
+        INSERT INTO membership_applications
+          (first_name, last_name, personal_id, phone, university, faculty, email, additional_info, created_at)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ');
       $stmt->execute([
         $data['full_name'],
         $data['age'],
@@ -121,7 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       ]);
     }
 
-    header('Location: membership.php?submitted=1');
+    // ✅ IMPORTANT FIX: redirect to clean root URL (not relative, not php filename)
+    header('Location: ' . $SUCCESS_URL, true, 303);
     exit;
   }
 }
@@ -131,8 +155,6 @@ include __DIR__ . '/header.php';
 <section class="section">
   <div class="container" style="max-width:900px;padding:40px 0 56px;display:grid;gap:14px">
     <div style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px">
-      <h2 style="margin:0 0 8px">გაწევრიანების განაცხადი</h2>
-      <p style="color:var(--muted);margin:0">გთხოვთ, სრულად შეავსოთ ველები. ყველა ველი სავალდებულოა.</p>
     </div>
 
     <div style="background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;gap:10px;line-height:1.65">
@@ -156,66 +178,69 @@ include __DIR__ . '/header.php';
       <p style="margin:0">✨ ერთად გავაგრძელოთ სწავლა და განვითარება ✨</p>
     </div>
 
-    <?php if($success): ?>
+    <?php if ($success): ?>
       <div class="ok">განაცხადი წარმატებით გაიგზავნა.</div>
     <?php endif; ?>
 
-    <?php if($errors): ?>
+    <?php if ($errors): ?>
       <div class="err">
-        <?php foreach($errors as $e): ?>
+        <?php foreach ($errors as $e): ?>
           <div><?= h($e) ?></div>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
-    <form method="post" style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;gap:12px">
-      <input type="hidden" name="_csrf" value="<?=h(csrf_token())?>">
+    <!-- ✅ IMPORTANT FIX: force POST to the clean URL -->
+    <form method="post" action="<?= h($FORM_PATH) ?>" style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;gap:12px">
+      <input type="hidden" name="_csrf" value="<?= h(csrf_token()) ?>">
 
       <div>
         <label>სახელი გვარი *</label>
-        <input name="full_name" required maxlength="190" value="<?=h($data['full_name'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+        <input name="full_name" required maxlength="190" value="<?= h($data['full_name']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
           <label>ტელეფონის ნომერი *</label>
-          <input name="phone" required maxlength="50" value="<?=h($data['phone'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+          <input name="phone" required maxlength="50" value="<?= h($data['phone']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
         </div>
         <div>
           <label>ელ. ფოსტის მისამართი *</label>
-          <input type="email" name="email" required maxlength="190" value="<?=h($data['email'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+          <input type="email" name="email" required maxlength="190" value="<?= h($data['email']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
           <label>უნივერსიტეტი, ფაკულტეტი, კურსი. *</label>
-          <input name="university_info" required maxlength="255" value="<?=h($data['university_info'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+          <input name="university_info" required maxlength="255" value="<?= h($data['university_info']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
         </div>
         <div>
           <label>ასაკი *</label>
-          <input name="age" required maxlength="20" value="<?=h($data['age'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+          <input name="age" required maxlength="20" value="<?= h($data['age']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
         </div>
       </div>
 
       <div>
         <label>იურიდიული მისამართი *</label>
-        <input name="legal_address" required maxlength="255" value="<?=h($data['legal_address'])?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
+        <input name="legal_address" required maxlength="255" value="<?= h($data['legal_address']) ?>" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)">
       </div>
 
       <div>
         <label>აირჩიე სასურველი მიმართულება *</label>
         <select name="desired_direction" required style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fff">
           <option value="">— აირჩიეთ —</option>
-          <?php foreach($directionOptions as $opt): ?>
-            <option value="<?=h($opt)?>" <?= $data['desired_direction'] === $opt ? 'selected' : '' ?>><?=h($opt)?></option>
+          <?php foreach ($directionOptions as $opt): ?>
+            <option value="<?= h($opt) ?>" <?= $data['desired_direction'] === $opt ? 'selected' : '' ?>>
+              <?= h($opt) ?>
+            </option>
           <?php endforeach; ?>
         </select>
       </div>
 
       <div>
         <label>რა არის თქვენი მოტივაცია? (50 სიტყვა მაქსიმუმ) *</label>
-        <textarea name="motivation_text" required style="width:100%;min-height:140px;padding:12px;border-radius:12px;border:1px solid var(--line)" placeholder="მოკლედ აღწერეთ თქვენი მოტივაცია (მაქსიმუმ 50 სიტყვა)"><?=h($data['motivation_text'])?></textarea>
+        <textarea name="motivation_text" required style="width:100%;min-height:140px;padding:12px;border-radius:12px;border:1px solid var(--line)" placeholder="მოკლედ აღწერეთ თქვენი მოტივაცია (მაქსიმუმ 50 სიტყვა)"><?= h($data['motivation_text']) ?></textarea>
       </div>
 
       <button type="submit" class="btn primary" style="justify-self:start">გაგზავნა</button>
